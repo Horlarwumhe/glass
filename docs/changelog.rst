@@ -1,6 +1,64 @@
 CHANGELOG
 =============
 
+v0.0.6
+-------
+
+
+- Support nesting template inheritance.
+
+This is a situation where template "a.html" inherit from "b.html" and "b.html" inherit from "c.html" etc.
+
+
+
+- Added special variable in the ``for`` tag.
+
+::
+
+    {% for item in items %}
+       {{loop.index}} -- {{item}}
+       {% if loop.last %}
+           {{item}} is the last
+       {% elif loop.first %}
+            {{item}} is the first
+        {% endif %}
+    {% endfor %}
+
+:func:`LoopCounter`
+
+Attributes.
+
+**loop.index**
+   
+   current iteration index (1 based indexing) of the loop
+
+**loop.index_0**
+
+  same as loop.index, but use 0 based indexing
+
+**loop.first**
+
+  returns True if this is the first iteration
+
+**loop.last**
+
+  returns True if this is the last iteration
+
+
+- Added a new tag
+
+``set`` tag for setting variable 
+
+::
+
+     {% set name=user.name %}
+        {{name}}
+
+
+
+-  Bugs fix
+
+
 v0.0.5
 -------
 This release includes critical bug fixes.
@@ -135,7 +193,7 @@ using ``view_name``;
 
   @app.route('/',view_name='main')
   def home()
-  return "hello"
+      return "hello"
 
 
 ::
