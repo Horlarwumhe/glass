@@ -93,13 +93,6 @@ class Session(dict):
         self.data = data
         self.modified = False
 
-    def __getitem__(self, key):
-
-        try:
-            return self.session_data[key]
-        except (KeyError, TypeError):
-            raise KeyError(key)
-
     def get(self, key, default=None):
         """Get session data with its key,
            returns default if not found.
@@ -124,6 +117,15 @@ class Session(dict):
         self.modified = True
         self.session_data[key] = value
 
+
+    def __getitem__(self, key):
+
+        try:
+            return self.session_data[key]
+        except (KeyError, TypeError):
+            raise KeyError(key)
+
+
     def __iter__(self):
         return iter(self.session_data)
 
@@ -133,6 +135,10 @@ class Session(dict):
 
     def __len__(self):
         return len(self.session_data)
+
+
+    def __contains__(self,key):
+        return key in self.session_data
 
     def pop(self, key, default=None):
         """Remove item from session data and
