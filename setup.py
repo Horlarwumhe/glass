@@ -1,10 +1,11 @@
 import setuptools
+
 file = open('README.md')
 description = file.read()
 file.close()
 setuptools.setup(
     name="glass-web",
-    version="0.0.5",
+    version="0.0.6",
     author="Horlarwumhe",
     author_email="amachiever4real@gmail.com",
     description="A library for building web applications",
