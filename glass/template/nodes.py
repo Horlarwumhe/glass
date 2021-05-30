@@ -1,0 +1,372 @@
+import ast
+import logging
+import operator
+import re
+
+logger = logging.getLogger('glass.app')
+
+VAR = re.compile('''
+^[\w_\.]+
+''', re.VERBOSE)
+STRING = re.compile('''
+(('.*')|".*")(\.\w+)*
+''', re.VERBOSE)
+
+FILTER = re.compile('''
+\s*\|\s*\w+
+''', re.VERBOSE)
+operators = {
+    'in': operator.contains,
+    '==': operator.eq,
+    '>': operator.gt,
+    '<': operator.lt,
+    '>=': operator.ge,
+    '<=': operator.le,
+    '!=': operator.ne,
+    'and': operator.and_,
+    '+': operator.add,
+    '-': operator.sub,
+    '*': operator.mul,
+    '/': operator.floordiv,
+    '//': operator.floordiv
+}
+
+
+class Node:
+    def render(self, context, env=None):
+        return ''
+
+
+class TextNode(Node):
+    def __init__(self, text):
+        self.text = text
+        super().__init__()
+
+    def render(self, context, env=None):
+        return self.text
+
+
+class VarNode(Node):
+    def __init__(self, var, funcs=None):
+        self.var = var
+        self.funcs = funcs or []
+        self.args = ()
+        super().__init__()
+
+    def render(self, ctx, env=None):
+        ret = self.eval(ctx, env)
+        if ret is None:
+            return ''
+        # it is possible for self.eval to return non string
+        # example, {{name.split}} which return list
+        return str(ret)
+
+    def eval(self, ctx, env=None):
+        '''This wil be called when VarNode is part of a block tag
+        eg. {% for name is names %}, {% if name %}, this will be called
+        to know what (name) is.
+        If it is not part of tag eg {{name}}, then render will be called
+        '''
+        if not self.var:
+            return ''
+        var = self.var.replace('"', '\'')
+        if var.startswith("'"):
+            i = var.index("'", 1)
+            string = var[:i + 1]
+            attrs = var[i + 1:]
+            attrs = attrs.split('.')
+            var = string
+        else:
+            var, *attrs = var.split('.')
+        var = self.resolve(var, ctx)
+        if var is None:
+            return ''
+        for attr in attrs:
+            if not attr:
+                continue
+            attr = attr.strip().rstrip()
+            if hasattr(var, attr):
+                func = getattr(var, attr)
+                if hasattr(func, '__call__'):
+                    var = func()
+                else:
+                    var = func
+            elif hasattr(var, '__getitem__'):
+                try:
+                    var = var[attr]
+                except (KeyError, TypeError):
+                    return
+            else:
+                return
+        if env:
+            for func in self.funcs:
+                callback = env.filters.get(func)
+                if callback:
+                    var = callback(var)
+        return var
+
+    def resolve(self, var, context):
+        var = var.strip().rstrip()
+        try:
+            return ast.literal_eval(var)
+        except ValueError:
+            return context.get(var)
+
+    @classmethod
+    def parse(cls, var):
+        # remove unnecessary space
+        var = var.strip().rstrip()
+        match = VAR.match(var)
+        funcs = []
+        if match:
+            end = match.end()
+            var_name = match.group()
+        else:
+            match = STRING.match(var)
+            if match:
+                end = match.end()
+                var_name = match.group()
+            else:
+                raise TemplateSyntaxError('couldnt parse %s ' % var)
+        for match in FILTER.finditer(var):
+            start = match.start()
+            if start != end:
+                raise TemplateSyntaxError('couldnt parse %s from ( %s )' %
+                                          (var[end:start], var))
+            func = ''.join(match.group().split()).strip('|')
+            funcs.append(func)
+            end = match.end()
+        if end != len(var):
+            raise TemplateSyntaxError('couldnt  parse %s from %s' %
+                                      (var[end:], var))
+        return cls(var_name, funcs)
+
+
+class IfNode(Node):
+    def __init__(self, condition, elifs, else_body, body):
+        self.elifs = elifs
+        self.else_ = else_body
+        self.body = body
+        self.condition = condition
+        super().__init__()
+
+    def render(self, context, env=None):
+        match = self.condition.eval(context, env)
+        if match:
+            return self.body.render(context, env)
+        for elif_ in self.elifs:
+            match = elif_.condition.eval(context, env)
+            if match:
+                return elif_.body.render(context, env)
+        if self.else_:
+            body = self.else_.body
+            return body.render(context, env)
+        return ''
+
+
+class ForNode(Node):
+    def __init__(self, var, iter_object, body, else_=None):
+        #TODO : solve loopvars or loopvar
+        self.iter_object = iter_object
+        self.body = body
+        self.loopvars = self.var = var
+        super().__init__()
+        self.else_ = else_
+
+    def render(self, context, env=None):
+        iter_object = self.iter_object.eval(context, env)
+        if not hasattr(iter_object, '__iter__'):
+            return ''
+        loopvars = self.loopvars
+        result = []
+        multi = len(loopvars) > 1
+        use_else = True
+        for index, item in enumerate(iter_object):
+            use_else = False
+            if multi:
+                if len(item) != len(loopvars):
+                    raise TypeError("for loop expect %s got %s" %
+                                    (len(loopvars), len(item)))
+                key_value = zip(loopvars, item)
+                context.update(key_value)
+            else:
+                context[self.loopvars[0]] = item
+            result.append(self.body.render(context, env))
+        if use_else and self.else_ is not None:
+
+            return self.else_.body.render(context, env)
+        for var in self.loopvars:
+            # remove the loop variable from the context
+            # once the for node is rendered
+            try:
+                context.pop(var)
+            except KeyError:
+                pass
+        return ''.join(result)
+
+
+class ElseNode(Node):
+    def __init__(self, body):
+        self.body = body
+        super().__init__()
+
+    def render(self, context, env=None):
+        # This is never called, rendering of this
+        # node is done when redering if node
+        return ''
+
+
+class ConditionNode(Node):
+    '''Test of if/elif node
+    {% if condition %}
+    the condition can take 3 forms
+    1. lhs op rhs (if 1 == 2),(if a or b)
+    2. not lhs (if not user.name)
+    3. lhs (if user.name)
+    '''
+    def __init__(self, lhs, op, rhs):
+        self.lhs = lhs
+        self.rhs = rhs
+        self.op = op
+        super().__init__()
+
+    def eval(self, context, env=None):
+        lhs = rhs = None
+        if self.lhs:
+            lhs = self.lhs.eval(context, env)
+        if self.rhs:
+            rhs = self.rhs.eval(context, env)
+        if self.op == 'not':
+            return operator.not_(lhs)
+        if not self.op:
+            return bool(lhs)
+        try:
+            return operators[self.op](lhs, rhs)
+        except TypeError:
+            # probably, datatype issue,
+            # eg str > int,
+            return False
+        except KeyError:
+            #TODO: do this at template parsing phase not rendering time
+            raise TypeError('Unknown operator "%s"' % self.op)
+
+
+class ElifNode(Node):
+    '''elif node'''
+    def __init__(self, condition, body):
+        self.condition = condition
+        self.body = body
+        super().__init__()
+
+    def render(self, context, env=None):
+        # This is never called, rendering of this
+        # node is done when redering if node
+        return ''
+
+
+class FilterNode(Node):
+    '''{% filter upper %}
+           everyting here with b in upper case
+           including {{user.name}}
+        {% end %}
+        but not this, it is outside the filter node
+    '''
+    def __init__(self, funcs, body):
+        self.funcs = funcs
+        self.body = body
+        super().__init__()
+
+    def render(self, context, env=None):
+        result = self.body.render(context, env)
+        if env:
+            for func in self.funcs:
+                callback = env.filters.get(func)
+                if callback:
+                    result = callback(result)
+        # callback might not return string
+        return str(result)
+
+
+class IncludeNode(Node):
+    def __init__(self, template_name):
+        self.template_name = template_name
+
+    def render(self, context, env=None):
+        if env:
+            template = env.get_template(self.template_name)
+            return template.render(context, env)
+        return ''
+
+
+class ExtendNode(Node):
+    def __init__(self, template, nodelist):
+        self.template = template
+        self.nodelist = nodelist
+
+    def render(self, context, env=None):
+        ## add super
+        if env:
+            parent = env.get_template(self.template)
+            parent_nodelist = parent.nodelist
+            parent_blocks = parent_nodelist.get_node_by_type(BlockNode)
+            blocks = self.nodelist.get_node_by_type(BlockNode)
+            blocks = {block.name: block for block in blocks}
+            for block in parent_blocks:
+                if block.name in blocks:
+                    current_block = blocks[block.name]
+                    if current_block.is_super:
+                        block.nodelist.add_node(current_block)
+                    else:
+                        parent.nodelist.replace_node(block, current_block)
+            return parent.render(context)
+        return self.nodelist.render(context, env)
+
+
+class BlockNode(Node):
+    def __init__(self, name, nodelist, is_super):
+        self.name = name
+        self.nodelist = nodelist
+        self.is_super = is_super
+
+    def render(self, context, env=None):
+        return self.nodelist.render(context, env)
+
+
+class NodeList(Node):
+    def __init__(self, nodelist):
+        self.nodelist = nodelist
+        super().__init__()
+
+    def render(self, context, env=None):
+        results = []
+        for node in self.nodelist:
+            result = node.render(context, env)
+            if result is None:
+                logger.warning(
+                    f'%s returns None'
+                    '  all template nodes are expected to return str'
+                    '  the result of this node is ignored' % node.__class__)
+                continue
+            results.append(str(result))
+        return ''.join(results)
+
+    def get_node_by_type(self, nodetype):
+        for node in self.nodelist:
+            if isinstance(node, nodetype):
+                yield node
+
+    def replace_node(self, node, replacement_node):
+        if not isinstance(replacement_node, Node):
+            return
+
+        try:
+            i = self.nodelist.index(node)
+        except ValueError:
+            return
+        self.nodelist[i] = replacement_node
+
+    def add_node(self, node):
+        self.nodelist.append(node)
+
+    def insert_node(self, pos, node):
+        self.nodelist.insert(pos, node)
