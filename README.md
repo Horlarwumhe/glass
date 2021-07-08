@@ -20,11 +20,11 @@ Glass  comes with builtin development server.
   app = GlassApp()
   @app.route('/')
   def home():
-  	return 'Hello, welcome.'
+    return 'Hello, welcome.'
 
   @app.route('/greet/<name>')
   def greet(name):
-  	  return 'Hello {}'.format(name)
+      return 'Hello {}'.format(name)
 
   app.run()
   #app.run(host='127.0.0.1',port=8000,auto_reload=True)
@@ -59,18 +59,18 @@ Glass template syntax is very similar to django template.
   from glass import request,redirect
 
   app = GlassApp()
-	@app.route('/')
-	def home():
-		#
-		posts = get_all_posts()
-		return render_template('index.html',posts=posts)
+  @app.route('/')
+  def home():
+    #
+    posts = get_all_posts()
+    return render_template('index.html',posts=posts)
 
-	@app.route('/greet/<name>')
-	def greet(name):
-		template = '''
-		Hello {{name}}, welcome to {{request.host}}
-		'''
-		return render_string(template,name=name)
+  @app.route('/greet/<name>')
+  def greet(name):
+    template = '''
+    Hello {{name}}, welcome to {{request.host}}
+    '''
+    return render_string(template,name=name)
 
   @app.route('/login',methods=["GET",'POST'])
   def login():
@@ -82,7 +82,7 @@ Glass template syntax is very similar to django template.
     else:
       return render_template('login.html')
 
-```
+``` 
 #### Documentation
 
 The full docs is available on [readthedocs](https://glass.readthedocs.io).
