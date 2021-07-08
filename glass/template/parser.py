@@ -10,6 +10,18 @@ TOKEN_REGEX = re.compile(
    \\{\\#.*?\\#\\}
    )''', re.VERBOSE)
 
+VAR = re.compile(r'''
+^[\w_\.]+
+''', re.VERBOSE)
+
+STRING = re.compile(r'''
+(('.*')|".*")(\.\w+)*
+''', re.VERBOSE)
+
+FILTER = re.compile(r'''
+\s*\|\s*\w+
+''', re.VERBOSE)
+
 operators = {
     'in': operator.contains,
     '==': operator.eq,
@@ -31,6 +43,7 @@ class TemplateSyntaxError(Exception):
     def __init__(self, msg, token=None):
         self.msg = msg
         self.token = token
+        super().__init__(msg)
 
 
 default_tags = {}
@@ -40,7 +53,6 @@ def register_tag(name):
     def inner(func):
         default_tags[name] = func
         return func
-
     return inner
 
 
@@ -62,7 +74,7 @@ class Token:
 
     def clean_tag(self):
         if self.type not in ("BLOCK", "ENDBLOCK"):
-            return "", ''
+            return '', ''
         try:
             cmd, *rest = self.content.split(maxsplit=1)
         except ValueError:
@@ -91,8 +103,8 @@ class Lexer:
                 else:
                     tokens.append(Token('BLOCK', self.clean(content), lineno))
             else:
-                content = 'hhhhhhhhh'
-                tokens.append(Token("TEXT", token, lineno))
+                if not token.isspace():
+                    tokens.append(Token("TEXT", token, lineno))
             lineno += token.count('\n')
         return tokens
 
@@ -138,7 +150,7 @@ class Parser:
                     break
                 ret = self.parse_block(token)
             elif token.type == 'VAR':
-                ret = Node.VarNode.parse(token.content)
+                ret = parse_variable(token.content)
             elif token.type == 'TEXT':
                 ret = Node.TextNode(token.content)
             result.append(ret)
@@ -155,7 +167,7 @@ class Parser:
         except KeyError:
             if re.search('end[a-z]+', cmd):
                 raise TemplateSyntaxError("Unexpected token %s" % token, token)
-            raise TemplateSyntaxError('uknown tag %s' % token, token)
+            raise TemplateSyntaxError('Uknown tag %s' % token, token)
         return ret
 
     def skip_token(self, n=1):
@@ -172,6 +184,35 @@ class Parser:
             else:
                 raise TemplateSyntaxError("unclosed tag expect one of %s" %
                                           ','.join(tags))
+
+
+def parse_variable(var):
+    # TODO
+    var = var.strip().rstrip()
+    match = VAR.match(var)
+    funcs = []
+    if match:
+        end = match.end()
+        var_name = match.group()
+    else:
+        match = STRING.match(var)
+        if match:
+            end = match.end()
+            var_name = match.group()
+        else:
+            raise TemplateSyntaxError('couldnt parse %s ' % var)
+    for match in FILTER.finditer(var):
+        start = match.start()
+        if start != end:
+            raise TemplateSyntaxError('couldnt parse %s from ( %s )' %
+                                      (var[end:start], var))
+        func = ''.join(match.group().split()).strip('|')
+        funcs.append(func)
+        end = match.end()
+    if end != len(var):
+        raise TemplateSyntaxError('couldnt  parse %s from %s' %
+                                  (var[end:], var))
+    return Node.VarNode(var_name, funcs)
 
 
 @register_tag('if')
@@ -243,9 +284,9 @@ def condition_parse(token):
     else:
         raise TemplateSyntaxError('unknown condition type %s' % token, token)
     if lhs:
-        lhs = Node.VarNode.parse(lhs)
+        lhs = parse_variable(lhs)
     if rhs:
-        rhs = Node.VarNode.parse(rhs)
+        rhs = parse_variable(rhs)
     if op and op not in operators:
         raise TemplateSyntaxError('unknown operator %s in %s' % (op, token),
                                   token)
@@ -270,7 +311,7 @@ def for_parse(parser):
     for var in loopvars:
         if not var.isidentifier():
             raise TemplateSyntaxError('invalid loop variable %s' % var, token)
-    iter_obj = Node.VarNode.parse(iter_object)
+    iter_obj = parse_variable(iter_object)
     return Node.ForNode(loopvars, iter_obj, body, else_)
 
 
@@ -308,20 +349,28 @@ def parse_block(parser):
     _, args = token.clean_tag()
     args = args.split()
     block_super = False
+    super_end = False
     if len(args) == 2:
         if args[1] != 'super':
-            raise TemplateSyntaxError('second arg of block tag should be super not %s'%args[1], token)
+            raise TemplateSyntaxError(
+                'second arg of block tag should be super not %s' % args[1],
+                token)
         block_super = True
     elif len(args) != 1 or not args:
-        raise TemplateSyntaxError('block tag requires one arg', token)
+        raise TemplateSyntaxError('block tag requires atleast one arg', token)
     body = parser.parse(stop_at=('endblock', ))
-    parser.skip_token(1)
+    # endblock tag
+    _, endargs = parser.get_next_token().clean_tag()
+    if endargs:
+        super_end = endargs.split()[0]
+        if super_end == 'super' and not block_super:
+            super_end = True
     name = args[0]
-    return Node.BlockNode(name, body,block_super)
-   
+    return Node.BlockNode(name, body, block_super, super_end)
+
 
 @register_tag('include')
 def parse_include(parser):
-    _ , name = parser.get_next_token().clean_tag()
+    _, name = parser.get_next_token().clean_tag()
     name = name.split()[0]
     return Node.IncludeNode(name)

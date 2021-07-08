@@ -13,8 +13,13 @@ logger = logging.getLogger('glass.app')
 
 
 class Request:
-    """This implement HTTP request, to access
-    incoming request data
+    """This implement HTTP request to access
+    incoming request data.
+
+    ::
+
+      from glass import request
+
     """
     __storage__ = _thread_local()
     environ = _thread_local()
@@ -39,7 +44,7 @@ class Request:
             return 'hello'
 
         """
-        cookie = SimpleCookie(self.environ.get("HTTP_COOKIE"))
+        cookie = SimpleCookie(self.environ.get("HTTP_COOKIE", ''))
         cookie = cookie.values()
         cookie_dict = {}
         for c in cookie:
@@ -49,8 +54,15 @@ class Request:
     @cached_property()
     def query(self):
         """URL query string, values after
-        ``?`` in request path, ``/users/list/?sort=True``
+        ``?`` in request path, ``/users/list/?sort=True&type=name``
+
+        ::
+
+           sort = request.args.get('sort')
+           type = request.args.get('type')
+           # request.args and request.query are same, use anyone.
         """
+
         return dict(
             urllib.parse.parse_qsl(self.environ.get("QUERY_STRING", '')))
 
@@ -72,7 +84,7 @@ class Request:
         return self.environ.get("HTTP_HOST", '')
 
     def get_json(self):
-        """Return data sent as json, if content_type is not
+        """Return data sent as json. If content_type is not
         ``application/json`` this returns ``None``
 
         """
@@ -83,7 +95,7 @@ class Request:
 
     def get_data(self):
         """Returns data sent to server as ``bytes``,
-        it better to check :attr:`content_length` with
+        It is good to check :attr:`content_length` with
         ``request.content_length`` before calling this method,
         content_length allows you to know size of the data
         and to avoid reading a very large data at once.
@@ -91,11 +103,18 @@ class Request:
         When this method is called,
         data stream sent to the server
         will be consumed,
-        request.post and request.files will
+        :attr:`request.post` and :attr:`request.files` will
         return empty dict if they are called
         after this method is called.
 
-        You can read the data sent in small chunck with ``request.stream``
+        You can read the data sent in small chunck with :attr:`request.stream`.
+        ::
+
+          size = request.content_length
+          if size > 50_000_000: # 50MB
+             # probably, you dont want read data
+             # of this size at once.
+             # use request.stream here
         """
         if hasattr(self, 'raw_data'):
             return self.raw_data
@@ -157,15 +176,16 @@ class Request:
     @cached_property()
     def files(self):
         """A dict-like object of files
-        sent to the browser.::
+        posted to the server.::
 
            user_pics = request.files.get('profile_pics')
            if user_pics:
-           # save the file
-           user_pics.save_as('/somepath')
+               # save the file
+               filename = user_pics.filename
+               user_pics.save_as('/somepath')
 
-        Note:
-            This only work if the request.method
+        .. note::
+            This only work if the :attr:`request.method`
             is POST, PUT or PATCH, and content_type is
             multipart/form-data.
             If not , it returns empty dict

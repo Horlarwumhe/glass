@@ -5,6 +5,15 @@ from .parser import Lexer, Parser, TemplateSyntaxError
 
 
 class Template:
+    """Main template. Use :class:`~Environment` instead of this.
+
+    :param source: template source
+
+    ::
+
+      template =Template('Hello {{user}}')
+      template.render({'user':'Horlar'})
+    """
     def __init__(self, source, env=None):
         self.filters = {}
         self.source = source
@@ -26,9 +35,9 @@ class Template:
             self.filters[name] = func
 
     def render(self, context):
+        """Render template"""
         if self._compiled_nodes is None:
             self.compile()
-        context = context.copy()
         context.update(self.context)
         return self._compiled_nodes.render(context, self.env)
 
@@ -36,6 +45,7 @@ class Template:
         self.tags.update(tags)
 
     def compile(self):
+        """Compile template source"""
         try:
             tokens = Lexer(self.source).tokenize()
             parser = Parser(tokens)
@@ -70,6 +80,14 @@ class TemplateLoader:
 
 
 class FileLoader(TemplateLoader):
+    """Template loader class to load templates from FileSystem(directory).
+    The argument can be a directory or list of directories
+
+    >>> loader = FileLoader('/path/to/templates')
+    >>> # load templates from multiple directories
+    >>> loader = FileLoader(['/path/to/templates','/path/to/other/templates'])
+    >>> env = Environment(loader=loader)
+    """
     def __init__(self, path=None):
         # save all the files loaded by this class
         # with last time each was modified
@@ -83,6 +101,9 @@ class FileLoader(TemplateLoader):
         self.path = list(path)
 
     def load_template(self, name):
+        """Load template the to render.
+        Returns the template source
+        """
         if not self.path:
             # append both /path/to/{cwd}/templates
             # and /path/to/cwd
@@ -96,17 +117,21 @@ class FileLoader(TemplateLoader):
             with open(path, 'r') as file:
                 content = file.read()
             return content
-        raise OSError("Template not found %s tried %s" % ' ,'.join(name,self.path))
+        raise OSError("Template not found %s tried %s" %
+                      (name, ' ,'.join(self.path)))
 
     def check_if_modified(self, name):
+        '''Check if the template has been modified or not.
+        Returns True if it has been modified, False if not.
+        '''
         for path in self.path:
-            path = os.path.join(path,name)
+            path = os.path.join(path, name)
             if not os.path.exists(path):
                 continue
             cache_time = self.history.get(path)
             if cache_time:
-                cur_time = int(os.stat(path).st_mtime)
-                if cur_time > cache_time:
+                now = int(os.stat(path).st_mtime)
+                if now > cache_time:
                     return True
                 return False
             return True
@@ -114,6 +139,18 @@ class FileLoader(TemplateLoader):
 
 
 class Environment:
+    '''The main environment for templates. The environment stores
+    tags and filter available to all templates and loader to load templates
+    from diffferent sources
+
+    :param cache: an object use to cache compiled templates.
+      default ``None`` (dont cache)
+
+    :param tags: dict of custom tags.
+
+    :param loader: template loader class to load templates.
+    :param filters: dict of custom filters.
+    '''
     def __init__(self, cache=None, tags=None, filters=None, **options):
 
         self.cache = cache
@@ -128,10 +165,25 @@ class Environment:
         self,
         string,
     ):
+        """Gets template to render from string,
+        Returns :class:`~Template`
+
+        >>> env = Environment()
+        >>> template = env.from_string('hello {{user}}')
+        >>> template.render({'user':'Horlar'})
+        """
         template = Template(string, env=self)
         return template.compile()
 
     def get_template(self, template_name):
+        '''Gets template to render from file,
+        Returns :class:`~Template`.
+        ::
+
+        >>> env = Environment()
+        >>> template = env.get_template('index.html')
+        >>> template.render({})
+        '''
         modified = self.loader.check_if_modified(template_name)
         # check if the template has been modified
         if not modified:
@@ -152,6 +204,12 @@ class Environment:
         return template
 
     def render_template(self, template, context):
+        """Render template from file.
+        ::
+
+        >>> env = Environment()
+        >>> env.render_template('index.html',{})
+        """
         return self.get_template(template).render(context)
 
     def get_globals(self):
@@ -160,6 +218,13 @@ class Environment:
         return {}
 
     def tag(self, name):
+        """Decorator to register custom tags.
+        ::
+
+            @env.tag('tagname')
+            def parse(parser):
+                # parse the tag here
+        """
         def inner(func):
             self.tags[name] = func
             return func
@@ -167,6 +232,13 @@ class Environment:
         return inner
 
     def filter(self, name):
+        """Decorator to register custom filter
+        ::
+
+            @env.filter('upper')
+            def upper(value):
+                return value.upper()
+        """
         def inner(func):
             self.filters[name] = func
             return func

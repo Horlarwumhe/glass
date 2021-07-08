@@ -1,0 +1,27 @@
+import sys
+
+import pytest
+
+from glass.routing import Rule, Router
+from glass.exception import HTTP404
+
+environ = {}
+def test_route():
+    rule1 = Rule('/u/<user>/profile/')
+    rule2 = Rule('/login/user/')
+    router = Router()
+    router.add(rule1)
+    router.add(rule2)
+    environ['PATH_INFO'] = '/u/horlar/profile/'
+    rule, kwargs = router.match(environ)
+    assert (rule is rule1)
+    assert kwargs == {'user': 'horlar'}
+    environ['PATH_INFO'] = '/login/user/'
+    rule, kwargs = router.match(environ)
+    assert rule is rule2
+    assert kwargs == {}
+    with pytest.raises(HTTP404):
+        environ['PATH_INFO'] = '/user/login/'
+        router.match(environ)
+
+

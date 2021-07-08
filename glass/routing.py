@@ -4,9 +4,17 @@ from glass.exception import HTTP404, MethodNotAllow
 
 RULE_REGEX = re.compile(r'<(?:(?P<converter>[^>:]+):)?(?P<parameter>\w+)>')
 
-CONVERTERS_REGEX = {'int': r'\d+', 'path': r'.+', 'str': r'[^/]+'}
+CONVERTERS_REGEX = {
+    'int': r'\d+',
+    'path': r'.+',
+    'str': r'[^/]+'
+}
 
-CONVERTERS = {'int': int, 'str': str, 'path': str}
+CONVERTERS = {
+    'int': int,
+    'str': str,
+    'path': str
+}
 
 
 class Rule:

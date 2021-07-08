@@ -22,7 +22,16 @@ logger.setLevel(logging.DEBUG)
 
 
 class GlassApp:
+    """Main application object
+    ::
 
+      from glass import GlassApp
+
+      app = GlassApp()
+      @app.route('/')
+      def home():
+         return 'Hello'
+    """
     def __init__(self, **kwargs):
 
         self.session_cls = SessionManager()
@@ -38,8 +47,11 @@ class GlassApp:
 
     @cached_property()
     def template_env(self):
-        env = AppTemplateEnviron(self, loader=AppTemplateLoader(),
-                                 cache=self.template_cache)
+        """Returns :class:`~glass.template.main.Environment` instance."""
+        env = AppTemplateEnviron(
+            self,
+            loader=AppTemplateLoader(path=self.config['TEMPLATES_FOLDER']),
+            cache=self.template_cache)
         return env
 
     @cached_property()
@@ -47,7 +59,7 @@ class GlassApp:
         path = self.config['TEMPLATES_FOLDER']
         if not path:
             path = os.path.abspath(os.path.join(os.getcwd(), 'templates'))
-        env = JinjaEnvironment(self,loader=JinjaFileLoader(path))
+        env = JinjaEnvironment(self, loader=JinjaFileLoader(path))
         return env
 
     def send_static(self, filename):
@@ -58,6 +70,13 @@ class GlassApp:
         return Cache()
 
     def route(self, url_rule, methods='GET', **kwargs):
+        """Register a view func for URL as decorator
+        ::
+
+           @app.route('/')
+           def index():
+              return 'Hello'
+        """
         def decorator(func):
             req_method = methods
             if not req_method:
@@ -81,15 +100,86 @@ class GlassApp:
         return self.route(url_rule, 'POST', **kwargs)
 
     def before_request(self, func):
+        """Register a function to run before each request.
+
+        For example, this can be used to open a database connection, or to load
+         logged in user from the session.
+
+        ::
+
+            @app.before_request
+            def load_user():
+                id = session.get('user_id')
+                if id:
+                    user = db.get(id=id)
+                    request.user = user
+                else:
+                    # make sure to set request.user = value
+                    # to avoid python raising AttributeError
+                    request.user = None
+
+
+        If the function doest not return None, the return value will be
+        used as the response.
+        ::
+
+           @app.before_request
+           def maintenance():
+              return "This site is under maintenance"
+
+        ::
+
+          def load_user():
+            pass
+          app.before_request(load_user)
+
+        """
         self.before_request_funcs.append(func)
         return func
 
     def after_request(self, func):
+        """Register a function to run after each request.
+
+        This can be used to add header(s) or cookie(s) to the response.
+        The function takes one argument,(:class:`glass.response.Response`) and must return
+        the same response object.
+
+        ::
+
+           @app.after_request
+           def set(response):
+             response.set_header('name','value')
+             response.set_cookie('name','value',path='/')
+             return response
+
+           @app.after_request
+           def turn_upper(response):
+              if isinstance(response.content,(str,bytes)):
+                  response.content = response.content.upper()
+              return response
+
+        """
         self.after_request_funcs.append(func)
         return func
 
     def error(self, error):
-        # TODO: return in the decorator
+        """Register a func to call when an error occurs in the
+        application. The function can be registered with code or
+        exception class. The function takes the exception class
+        as argument.
+
+        ::
+
+              @app.error(404):
+              def not_found(err):
+                return "path not found"
+
+              # with exception class
+              @app.error(TypeError)
+              def type_error(error):
+                assert error.__class__ is TypeError
+                return 'TypeError exception occurs'
+        """
         def decorator(func):
             if isinstance(error, int):
                 self.error_code_handlers[error] = func
@@ -99,22 +189,42 @@ class GlassApp:
 
         return decorator
 
+    def run(self, host='127.0.0.1', port=8000, auto_reload=False):
+        """Run the application development server.
+
+        :param host: ip address to listen on. default to localhost ``127.0.0.1``
+        :param port: port for the server to listen. default to ``8000``
+        :param auto_reload: enable reloader. reload the server when the
+               app source files change. default to ``False``
+
+        ::
+
+            app = GlassApp()
+            @app.route('/')
+            def index():
+                return "Hello"
+            app.run()
+        """
+        from glass.server import GlassServer
+        GlassServer().run_app(self, host, port, auto_reload)
+
     def _call_before_request(self):
         for func in self.before_request_funcs:
-            func()
+            response = func()
+            if response:
+                return response
 
     def _call_after_request(self, response):
-        main_response = response
-        response = None
+        return_value = None
         for func in self.after_request_funcs:
-            response = func(response)
-            if not isinstance(response, main_response.__class__):
+            return_value = func(response)
+            if not isinstance(return_value, response.__class__):
                 raise TypeError(
                     'after_request function should return %s not %s' %
-                    (main_response.__class__, response.__class__))
-        if not response:
-            return main_response
-        return response
+                    (response.__class__, return_value.__class__))
+        if not return_value:
+            return response
+        return return_value
 
     def _call_callback(self, environ):
         try:
@@ -124,8 +234,9 @@ class GlassApp:
                 if not environ['PATH_INFO'].endswith('/'):
                     return Redirect(environ['PATH_INFO'] + '/')
             callback = rule.get_callback(method)
-            self._call_before_request()
-            response = callback(**kwargs)
+            response = self._call_before_request()
+            if not response:
+                response = callback(**kwargs)
         except HTTPError as exc:
             response = self._handle_http_exc(exc)
         except Exception as exc:
@@ -166,7 +277,9 @@ class GlassApp:
         if code and code < 500:
             logger.debug('''[{exc}] {cls} {path} {code}'''.format(
                 exc=exc,
-                cls=exc.__class__.__name__, path=request.path, code=code))
+                cls=exc.__class__.__name__,
+                path=request.path,
+                code=code))
         else:
             logger.exception('Error in path [%s]' % request.path)
 

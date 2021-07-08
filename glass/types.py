@@ -25,11 +25,14 @@ class WSGIHeader(dict):
     def __init__(self, environ):
         self.environ = environ
 
-    def __getitem__(self, key):
-        key = key.upper().replace('-', '_')
-        if key not in ("REQUEST_METHOD","CONTENT_TYPE", 'CONTENT_LENGTH'):
+    def __getitem__(self, header_key):
+        key = header_key.upper().replace('-', '_')
+        if key not in ("REQUEST_METHOD", "CONTENT_TYPE", 'CONTENT_LENGTH'):
             key = 'HTTP_' + key
-        return self.environ[key]
+        if key in self.environ:
+            return self.environ[key]
+        raise KeyError(header_key)
+
 
     def get(self, key, default=None):
         try:
@@ -45,7 +48,10 @@ class WSGIHeader(dict):
     def __iter__(self):
         for key, value in self.environ.items():
             key = key.replace('_', '-')
-            if key.startswith('HTTP_'):
-                key = key.lstrip('HTTP_')
+            if key.startswith('HTTP-'):
+                key = key.lstrip('HTTP-')
             key = key.title()
             yield key, value
+
+    def __repr__(self):
+        return str(dict(list(self)))

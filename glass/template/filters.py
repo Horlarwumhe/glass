@@ -19,3 +19,10 @@ def upper(value):
 @register('escape')
 def escape(value):
     return html.escape(str(value))
+
+
+@register('call')
+def call(func):
+    if hasattr(func, '__call__'):
+        return func()
+    return func

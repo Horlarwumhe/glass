@@ -48,7 +48,7 @@ class HTTPError(Exception):
             html.append(tb)
         html.append('''
         <h3>Note: You are seeing this traceback because
-        <b>Debug</b> is set to True,</h3>''')
+        <b>Debug</b> is set to True.</h3>''')
         html.append('</body></html>')
         return ''.join(html)
 
@@ -67,7 +67,7 @@ class MethodNotAllow(HTTPError):
 class InternalServerError(HTTPError):
     code = 500
     description = """
-    Internal Server Error, an error occurs
+    Internal Server Error. An error occurs
     while processing request
     """
 

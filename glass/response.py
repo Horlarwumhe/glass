@@ -2,8 +2,10 @@ import io
 import json
 import mimetypes
 import os
+import re
 from datetime import datetime
 from email.utils import parsedate_tz
+
 from glass import http, utils
 from glass.cookie import HTTPCookie
 from glass.types import Header
@@ -53,6 +55,8 @@ class BaseResponse:
         :param name: cookie name
         :param value: cookie value
         :param kw: optional keywords argument
+            ``max-age``, ``samesite``, ``domain``
+            ``path``, ``expires``.
 
         Example::
 
@@ -61,30 +65,44 @@ class BaseResponse:
              resp = Response('hello')
              resp.set_cookie('name',value)
              resp.set_cookie('name1',value,
-             expires='',max_age=0,httponly=True,
+             max_age=45633,httponly=True,
              secure=False,samesite='lax')
              # check mozilla for details about
              # the keywords argument
+             return resp
 
         """
-        kw['Path'] = kw.get('path') or kw.get('Path') or '/'
-        kw['HttpOnly'] = kw.get('httponly') or kw.get('HttpOnly', False)
+        kw['Path'] = kw.pop('path', None) or kw.pop('Path', None) or '/'
+        kw['HttpOnly'] = kw.pop('httponly', False) or kw.pop('HttpOnly', False)
         self.cookies.add_cookie(name, value, **kw)
 
     def delete_cookie(self, key, **kw):
-        """Delete cookie previously sent to server
+        """Delete cookie previously sent by the server.
 
-        Example::
+        ::
 
-          resp = Response('hello')
-          resp.delete_cookie('name',path='/',domain='domain')
-
+          app = GlassApp()
+          @app.route('/')
+              resp = Response('hello')
+              resp.delete_cookie('name',path='/',domain='domain')
+              return resp
         """
         kw['max_age'] = 0
         self.set_cookie(key, "", **kw)
 
     def set_header(self, name, value, **kwargs):
-        """Add header to the response headers"""
+        """Add header to the response headers
+        ::
+
+            app = GlassApp()
+            @app.route('/')
+            def home():
+                resp = Response('hello')
+                resp.set_header('name','value')
+                response.set_header('Content-Type','text/plain')
+                return resp
+
+        """
 
         self.headers.add(name, value, **kwargs)
 
@@ -122,15 +140,14 @@ class Response(BaseResponse):
 
     ::
 
-           resp = Response('hello',
-           headers={"key":'value'},status_code=200
-             )
+       resp = Response('hello',
+       headers={"key":'value'},status_code=200)
 
     """
     def __init__(self, content, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if isinstance(content, (str, bytes)):
-            content = utils.encode(content)
+            content = utils.encode(content, self.charset)
             self.headers['Content-Length'] = len(content)
         self.content = content
 
@@ -140,11 +157,12 @@ class JsonResponse(Response):
     see :class:`glass.response.BaseResponse` for
     the parameters and methods
     ::
-       @app.route('/')
-       def json()
+
+        @app.route('/')
+        def json()
            data  = {'name':'username','email':'usermail@mail.com'}
            return JsonResponse(data)
-     """
+    """
     def __init__(self, content, *args, **kwargs):
         content = json.dumps(content)
         super().__init__(content, *args, **kwargs)
@@ -156,6 +174,7 @@ class Redirect(Response):
     """Issue redirect response to the browser
 
     :param location: redirect location
+
     see :class:`glass.response.BaseResponse` for
     the parameters and methods
 
@@ -217,6 +236,13 @@ class FileResponse(Response):
             headers['Content-Type'] = content_type
         return headers
 
+    def __iter__(self):
+        while 1:
+            r = self.content.read(2048)
+            if not r:
+                return
+            yield r
+
 
 class StaticResponse(FileResponse):
     pass
@@ -224,8 +250,6 @@ class StaticResponse(FileResponse):
 
 def send_static(filename, app, request):
     """Send static file (css,jss,images,...)
-    request is made as argument to this function,
-    instead of importing, to avoid circular import
 
     """
     if filename.startswith('../')\
@@ -264,7 +288,7 @@ def redirect(location, code=302, response=''):
     return Redirect(location, content=response, status_code=code)
 
 
-def flash(message):
+def flash(message, category=None):
     flashes = session.get('__flash__', None)
     if not flashes:
         flashes = session['__flash__'] = []
@@ -275,9 +299,51 @@ def messages():
     msgs = session.get('__flash__', [])
     r = []
     for msg in msgs:
-        r.append(msg)
-        msgs.pop(0)
-    return r
+        yield msg
+    msgs.clear()
 
 
-flash_messages = messages
+get_session_messages = flash_messages = messages
+
+
+# # TODO:
+
+# class _Flash:
+#     def get_session_messages(self):
+#         msgs = session.get('__flash__', {})
+#         r = []
+#         for _, msg in msgs.items():
+#             yield msg
+#         msgs.clear()
+
+#     def __getattr__(self, attr):
+#         match = re.match(r'get_(\w+)_messages', attr)
+#         if not match:
+#             raise AttributeError()
+#         category = match.group(1)
+#         messages = session.get('__flash__', {}).pop(category, [])
+#         for msg in messages:
+#             yield msg
+
+
+# def _flash(message, category=None):
+#     flashes = session.get('__flash__', None)
+#     if not flashes:
+#         flashes = session['__flash__'] = {}
+#     if category is None:
+#         category = 'all'
+#     if category in flashes:
+#         flashes[category].append(message)
+#     else:
+#         flashes[category] = [message]
+
+
+# def __messages():
+#     msgs = session.get('__flash__', [])
+#     r = []
+#     for msg in msgs:
+#         r.append(msg)
+#     msgs.clear()
+
+# ####------------------------------------------------------###
+

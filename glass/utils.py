@@ -14,7 +14,6 @@ class cached_property:
         return self
 
     def __get__(self, obj, cls):
-        error = None
         if not obj:
             return self
         storage = obj.__storage__ if hasattr(obj,

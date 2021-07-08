@@ -1,12 +1,12 @@
-import os
-
 from glass.template import Environment, FileLoader
 from glass._helpers import current_app as app
 from glass.response import flash_messages
+
 try:
+    import jinja2
     from jinja2 import Environment as BaseJinjaEnvironment
     from jinja2 import FileSystemLoader as JinjaFileLoader
-except ImportError as e:
+except ImportError:
 
     class BaseJinjaEnvironment:
         def __init__(self, *args, **kwargs):
@@ -15,15 +15,20 @@ except ImportError as e:
     JinjaFileLoader = BaseJinjaEnvironment
 
 
+class Context(dict):
+    pass
+
+
 def render_template(template, context=None, **kwargs):
-    if context:
+    if context is not None:
         if not isinstance(context, dict):
             raise ValueError("context must be dict")
     context = context or {}
+    context = Context(context)
     backend = app.config.get('TEMPLATE_BACKEND', 'stl')
     backend_render = TEMPLATE_RENDER.get(backend)
     if not backend_render:
-        raise ValueError("Unknown template backend %s"%backend)
+        raise ValueError("Unknown template backend %s" % backend)
     return backend_render(template, context, **kwargs)
 
 
@@ -34,18 +39,20 @@ def render_string(string, context=None, **kwargs):
         if not isinstance(context, dict):
             raise ValueError("context must be dict")
     context = context or {}
+    context = Context(context)
     backend = app.config.get('TEMPLATE_BACKEND', 'stl')
     backend_render = STRING_RENDER.get(backend)
     if not backend_render:
-        raise ValueError("Unknown template backend %s"%backend)
+        raise ValueError("Unknown template backend %s" % backend)
     return backend_render(string, context, **kwargs)
 
 
 def _render_stl_string(string, context, **kwargs):
-    """Render string using builtin template ``stl``"""
+    """Render string using the builtin template."""
     env = app.template_env
     context.update(kwargs)
     template = env.from_string(string)
+    print(context.__class__)
     return template.render(context)
 
 
@@ -57,12 +64,11 @@ def _render_stl_template(template, context, **kwargs):
 
 
 class AppTemplateEnviron(Environment):
-
-    def __init__(self,app,*args,**kwargs):
+    def __init__(self, app, *args, **kwargs):
         self.app = app
-        super().__init__(*args,**kwargs)
+        super().__init__(*args, **kwargs)
         self.add_globals()
-    
+
     def add_globals(self):
         """Get global values to inject in to the template
         """
@@ -70,45 +76,48 @@ class AppTemplateEnviron(Environment):
         from glass.sessions import session
 
         globals = {
+            'get_flash_messages': flash_messages,
             'request': request,
             'session': session,
-            'app':app
+            'app': self.app
         }
         self.globals.update(globals)
 
 
 class AppTemplateLoader(FileLoader):
-    def load_template(self, template):
-        path = app.config["TEMPLATES_FOLDER"]
-        if path:
-            path = os.path.join(path, template)
-            if not os.path.exists(path):
-                raise OSError("Template not found %s" % path)
-        else:
-            # template folder is not set in the
-            # app.config, use default method
-            return super().load_template(template)
-        self.history[path] = int(os.stat(path).st_mtime)
-        with open(path, 'r') as file:
-            content = file.read()
-        return content
+    pass
 
-    def check_if_modified(self, name):
-        path = app.config['TEMPLATES_FOLDER']
-        if not path:
-            # template folder is not set in the
-            # app config, use default method
-            return super().check_if_modified(name)
-        path = os.path.join(path, name)
-        if not os.path.exists(path):
-            return True
-        cache_time = self.history.get(path)
-        if cache_time:
-            cur_time = int(os.stat(path).st_mtime)
-            if cur_time > cache_time:
-                return True
-            return False
-        return True
+    # def load_template(self, template):
+    #     path = app.config["TEMPLATES_FOLDER"]
+    #     if path:
+    #         path = os.path.join(path, template)
+    #         if not os.path.exists(path):
+    #             raise OSError("Template not found %s" % path)
+    #     else:
+    #         # template folder is not set in the
+    #         # app.config, use default method
+    #         return super().load_template(template)
+    #     self.history[path] = int(os.stat(path).st_mtime)
+    #     with open(path, 'r') as file:
+    #         content = file.read()
+    #     return content
+
+    # def check_if_modified(self, name):
+    #     path = app.config['TEMPLATES_FOLDER']
+    #     if not path:
+    #         # template folder is not set in the
+    #         # app config, use default method
+    #         return super().check_if_modified(name)
+    #     path = os.path.join(path, name)
+    #     if not os.path.exists(path):
+    #         return True
+    #     cache_time = self.history.get(path)
+    #     if cache_time:
+    #         cur_time = int(os.stat(path).st_mtime)
+    #         if cur_time > cache_time:
+    #             return True
+    #         return False
+    #     return True
 
 
 class Cache(dict):
@@ -127,7 +136,7 @@ class Cache(dict):
 
 
 class JinjaEnvironment(BaseJinjaEnvironment):
-    def __init__(self,app, *args, **kwargs):
+    def __init__(self, app, *args, **kwargs):
         from glass.requests import request
         from glass.sessions import session
         super().__init__(*args, **kwargs)
@@ -137,7 +146,7 @@ class JinjaEnvironment(BaseJinjaEnvironment):
             'app': app,
             'session': session,
             'config': app.config,
-            'messages':flash_messages
+            'get_flash_messages': flash_messages
         })
 
     def register_filter(self, name):
@@ -159,6 +168,7 @@ class JinjaEnvironment(BaseJinjaEnvironment):
 def _render_jinja_string(string, context, **kwargs):
     """Render string template using  ``jinja``"""
     template = app.jinja_env.from_string(string)
+
     return template.render(context, **kwargs)
 
 

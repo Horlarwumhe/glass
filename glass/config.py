@@ -49,9 +49,7 @@ class Config(dict):
         >> conf = Config()
         >> file = '/path/to/conf.json'
         >> conf.from_json(file)
-        >> conf.from_json(open(file))
 
-        :param
         '''
         if isinstance(json_file, (bytes, str)):
 
@@ -61,7 +59,6 @@ class Config(dict):
                 return self.update(json.loads(configs))
             finally:
                 json_file.close()
-        return self.update(json.load(json_file))
 
     def __getitem__(self, key):
         try:

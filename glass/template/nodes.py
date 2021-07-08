@@ -2,19 +2,21 @@ import ast
 import logging
 import operator
 import re
+import warnings
 
-logger = logging.getLogger('glass.app')
+logger = logging.getLogger('glass.template')
 
-VAR = re.compile('''
+VAR = re.compile(r'''
 ^[\w_\.]+
 ''', re.VERBOSE)
-STRING = re.compile('''
+STRING = re.compile(r'''
 (('.*')|".*")(\.\w+)*
 ''', re.VERBOSE)
 
-FILTER = re.compile('''
+FILTER = re.compile(r'''
 \s*\|\s*\w+
 ''', re.VERBOSE)
+
 operators = {
     'in': operator.contains,
     '==': operator.eq,
@@ -32,6 +34,13 @@ operators = {
 }
 
 
+class TemplateSyntaxError(Exception):
+    def __init__(self, msg, token=None):
+        self.msg = msg
+        self.token = token
+        super().__init__(msg)
+
+
 class Node:
     def render(self, context, env=None):
         return ''
@@ -44,6 +53,9 @@ class TextNode(Node):
 
     def render(self, context, env=None):
         return self.text
+
+    def __repr__(self):
+        return ' <TextNode text={}'.format(self.text.strip()[:20])
 
 
 class VarNode(Node):
@@ -81,10 +93,12 @@ class VarNode(Node):
         var = self.resolve(var, ctx)
         if var is None:
             return ''
+        if hasattr(var, '__call__'):
+            var = var()
         for attr in attrs:
             if not attr:
                 continue
-            attr = attr.strip().rstrip()
+            attr = attr.strip()
             if hasattr(var, attr):
                 func = getattr(var, attr)
                 if hasattr(func, '__call__'):
@@ -106,7 +120,7 @@ class VarNode(Node):
         return var
 
     def resolve(self, var, context):
-        var = var.strip().rstrip()
+        var = var.strip()
         try:
             return ast.literal_eval(var)
         except ValueError:
@@ -114,8 +128,12 @@ class VarNode(Node):
 
     @classmethod
     def parse(cls, var):
-        # remove unnecessary space
-        var = var.strip().rstrip()
+
+        warnings.warn(
+            "classmethod nodes.VarNode.parse is depreciated."
+            " Use function variable_parse() in glass.template.parser",
+            UserWarning)
+        var = var.strip()
         match = VAR.match(var)
         funcs = []
         if match:
@@ -166,7 +184,6 @@ class IfNode(Node):
 
 class ForNode(Node):
     def __init__(self, var, iter_object, body, else_=None):
-        #TODO : solve loopvars or loopvar
         self.iter_object = iter_object
         self.body = body
         self.loopvars = self.var = var
@@ -184,9 +201,15 @@ class ForNode(Node):
         for index, item in enumerate(iter_object):
             use_else = False
             if multi:
-                if len(item) != len(loopvars):
-                    raise TypeError("for loop expect %s got %s" %
-                                    (len(loopvars), len(item)))
+                try:
+                    item_len = len(item)
+                except TypeError:
+                    item_len = 1
+                if item_len != len(loopvars):
+                    raise TypeError(
+                        "For loop sequence '%s' returned %s value(s),"
+                        " but loop variable has %s values(s)"
+                        % (self.iter_object.var, item_len, len(loopvars)))
                 key_value = zip(loopvars, item)
                 context.update(key_value)
             else:
@@ -197,7 +220,7 @@ class ForNode(Node):
             return self.else_.body.render(context, env)
         for var in self.loopvars:
             # remove the loop variable from the context
-            # once the for node is rendered
+            # once the for node is rendered.
             try:
                 context.pop(var)
             except KeyError:
@@ -237,16 +260,21 @@ class ConditionNode(Node):
         if self.rhs:
             rhs = self.rhs.eval(context, env)
         if self.op == 'not':
+            # {% if not x %}
             return operator.not_(lhs)
         if not self.op:
+            # {% if x %}
             return bool(lhs)
         try:
+            # {% if x op y %}
+            # op is supported operators
             return operators[self.op](lhs, rhs)
         except TypeError:
-            # probably, datatype issue,
-            # eg str > int,
+            # probably datatype issue,
+            # eg str > int
             return False
         except KeyError:
+            # this should not occur.
             #TODO: do this at template parsing phase not rendering time
             raise TypeError('Unknown operator "%s"' % self.op)
 
@@ -266,7 +294,7 @@ class ElifNode(Node):
 
 class FilterNode(Node):
     '''{% filter upper %}
-           everyting here with b in upper case
+           everyting here with be in upper case
            including {{user.name}}
         {% end %}
         but not this, it is outside the filter node
@@ -286,6 +314,9 @@ class FilterNode(Node):
         # callback might not return string
         return str(result)
 
+    def __repr__(self):
+        return 'FilterNode filters=[{}]'.format(','.join(self.funcs))
+
 
 class IncludeNode(Node):
     def __init__(self, template_name):
@@ -304,7 +335,6 @@ class ExtendNode(Node):
         self.nodelist = nodelist
 
     def render(self, context, env=None):
-        ## add super
         if env:
             parent = env.get_template(self.template)
             parent_nodelist = parent.nodelist
@@ -316,25 +346,36 @@ class ExtendNode(Node):
                     current_block = blocks[block.name]
                     if current_block.is_super:
                         block.nodelist.add_node(current_block)
+                    elif current_block.is_super_end:
+                        block.nodelist.insert_node(0, current_block)
                     else:
                         parent.nodelist.replace_node(block, current_block)
             return parent.render(context)
         return self.nodelist.render(context, env)
 
+    def __repr__(self):
+        return 'ExtendNode template={}'.format(self.template)
+
 
 class BlockNode(Node):
-    def __init__(self, name, nodelist, is_super):
+    def __init__(self, name, nodelist, is_super, is_super_end=False):
         self.name = name
         self.nodelist = nodelist
         self.is_super = is_super
+        self.is_super_end = is_super_end
 
     def render(self, context, env=None):
         return self.nodelist.render(context, env)
+
+    def __repr__(self):
+        return '<BlockNode name={} is_super={} is_super_end={}'.format(
+            self.name, self.is_super, self.is_super_end)
 
 
 class NodeList(Node):
     def __init__(self, nodelist):
         self.nodelist = nodelist
+        self.nodelist_temp = None
         super().__init__()
 
     def render(self, context, env=None):
@@ -343,11 +384,14 @@ class NodeList(Node):
             result = node.render(context, env)
             if result is None:
                 logger.warning(
-                    f'%s returns None'
+                    '%s returns None'
                     '  all template nodes are expected to return str'
                     '  the result of this node is ignored' % node.__class__)
                 continue
             results.append(str(result))
+        if hasattr(self, '_original_nodes_'):
+            self.nodelist = self._original_nodes_
+            del self._original_nodes_
         return ''.join(results)
 
     def get_node_by_type(self, nodetype):
@@ -356,9 +400,9 @@ class NodeList(Node):
                 yield node
 
     def replace_node(self, node, replacement_node):
+        self._copy_nodelist()
         if not isinstance(replacement_node, Node):
             return
-
         try:
             i = self.nodelist.index(node)
         except ValueError:
@@ -366,7 +410,21 @@ class NodeList(Node):
         self.nodelist[i] = replacement_node
 
     def add_node(self, node):
+        self._copy_nodelist()
         self.nodelist.append(node)
 
     def insert_node(self, pos, node):
+        self._copy_nodelist()
         self.nodelist.insert(pos, node)
+
+    def _copy_nodelist(self):
+        """Little tricky here.
+        The nodelist for a Node object are copied temporary.
+        For extends tag which will override the some blocks tag in
+        other template,the original nodelist are copied so the nodelist can
+        be restored back to the default nodelist after the Node is rendered.
+        """
+
+        if hasattr(self, '_original_nodes_'):
+            return
+        self._original_nodes_ = self.nodelist.copy()
