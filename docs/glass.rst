@@ -924,7 +924,7 @@ By default, Glass writes logs to process stdout. You can log app messages to ano
        logger.info('error occurs')
        return render('500.html')
 
-check Python logging module `documentation <https://python.org>`_.
+check Python logging module `documentation <https://docs.python.org/3/library/logging.html>`_.
 
 
 Using Jinja2
