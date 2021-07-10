@@ -9,7 +9,7 @@ Quickstart
 .. _gunicorn: https://gunicorn.org
 
 
-This page shows introduction to glass. The content of this page is short, as glass is just micro-framework. The code examples are self explanatory and it is easy to understand.
+This page shows introduction to Glass. The content of this page is short, as Glass is just micro-framework. The code examples are self explanatory and it is easy to understand.
 
 
 .. toctree::
@@ -44,6 +44,7 @@ You can clone it from github with git.
   $ cd glass
 
   $ python setup.py install
+  $ pip install -r requirements.txt
 
 
 Your first code;
@@ -54,7 +55,7 @@ Your first code;
    app = GlassApp()
    @app.route('/')
    def home():
-       return 'this is home page'
+       return 'This is home page'
 
 
 Starting The Server
@@ -168,11 +169,11 @@ The url rule can take optional converter.
 
 .. note::
 
-      - If the url rule doesn't end with slash, eg ``'/post/<post_id>'``, this url ``/post/1/`` will return ``404 Not Found``, but ``/post/1`` will match.
-      - If the url rule ends with slash eg, ``/user/login/``, user using this ``/user/login`` will be redirected to the original url ``/user/login/``
+      - If the url rule doesn't end with slash e.g. ``'/post/<post_id>'``, this url ``/post/1/`` will return ``404 Not Found``, but ``/post/1`` will match.
+      - If the url rule ends with slash e.g. ``/user/login/``, user using this ``/user/login`` will be redirected to the original url ``/user/login/``
 
 
-By default, each url function allow ``GET`` request method. glass will return ``405 Method Not Allowed`` if any other request method is used. You need to provide other methods to the view.
+By default, each url function allow ``GET`` request method. Glass will return ``405 Method Not Allowed`` if any other request method is used. You need to provide other methods to the view.
 
 ::
 
@@ -224,7 +225,7 @@ Return response with status code;
 
 Return ``dict``.
 
-If the view return dict, the response headers ``Content_Type`` will be set to ``application/json``,
+If the view return dict, the response headers ``Content_Type`` will be set to ``application/json``
 and the response dict will be converted to json.
   
 .. code:: python
@@ -236,7 +237,7 @@ and the response dict will be converted to json.
 
 Response Object
 -----------------
-To have more control over the response , eg setting headers, cookies, content_type, use :class:`~glass.response.Response` object.
+To have more control over the response e.g. setting headers, cookies, content_type, use :class:`~glass.response.Response` object.
 
 .. code:: python
 
@@ -653,8 +654,8 @@ Configuration
 
 The configuration pattern used is similar to flask. All the config values are stored in dict.
 
-glass has some predefined configurations,
-read more at :doc:`configuration <config>`
+Glass has some predefined configurations.
+Read more at :doc:`configuration <config>`
 
 .. code:: python
 
@@ -709,7 +710,7 @@ Like flask and django, default url for static files is ``/static/``.
 
 Template
 --------------
-glass comes with template engine. The docs here show how to use the template engine with glass. The full docs is available in the template :doc:`documentation <template>`.
+Glass comes with template engine. The docs here show how to use the template engine with Glass. The full docs is available in the template :doc:`documentation <template>`.
 
 Template Quickstart
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -752,7 +753,7 @@ The template syntax is very similar to django template.
 
 
 
-glass will look for  **templates** folder in the current working directory to load templates. You can set another directory for templates.
+Glass will look for  **templates** folder in the current working directory to load templates. You can set another directory for templates.
 
 .. code:: python
 
@@ -776,14 +777,14 @@ The template is configured with the following global variables. They can be acce
        *current app*
 
 
-Create global variable;
+create global variable;
 
 ::
 
   from datetime import datetime as dt
   app.template_env.globals['date'] = dt.now
 
-in the template file.
+in the template file;
 ::
 
    <b> {{date}} </b>
@@ -820,7 +821,7 @@ manually register the filter;
 ::
 
    def secret(value):
-      return return value[:5]+'******'
+      return  value[:5]+'******'
 
    app.template_env.filters['secret'] = secret
 
@@ -838,7 +839,7 @@ in the template file;
 Tags
 ~~~~~~~~
 
-Tags are like keywords. The are delimited by ``{%  %}``.
+Tags are like keywords. They are delimited by ``{%  %}``.
 
 
 ::
@@ -894,7 +895,36 @@ Read on how to parse custom tags in the template :ref:`documentation <custom-tag
 
 The template full docs is :doc:`available here <template>`.
 
+Logging
+~~~~~~~~~~~
 
+Glass emits messages when incidents that need attention occur in the app. Such as unhandle exceptions.
+By default, Glass writes logs to process stdout. You can log app messages to another stream using logging module.
+
+::
+
+    # this will log all app messages to file 'app.log'.
+    import logging
+    # the logger name used is 'glass.app'
+    logger = logging.getLogger('glass.app')
+    handler = logging.FileHandler('app.log')
+    handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s:%(levelname)s: %(message)s', datefmt='%d/%m/%Y %H:%M:%S %p')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
+
+    app = GlassApp()
+    @app.route('/')
+    def home():
+       return "Hello"
+
+    @app.error(500)
+    def error(e):
+       logger.info('error occurs')
+       return render('500.html')
+
+check Python logging module `documentation <https://python.org>`_.
 
 
 Using Jinja2
@@ -934,7 +964,7 @@ Global Value
 Working with database
 -----------------------
 
-glass does not come with ORM. You can use sqlalchemy,ponyorm,sqlobject or use pure SQL using sqlite3 
+Glass does not come with ORM. You can use sqlalchemy,ponyorm,sqlobject or use pure SQL using sqlite3 .
 
 
 Full example

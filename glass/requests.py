@@ -54,7 +54,7 @@ class Request:
     @cached_property()
     def query(self):
         """URL query string, values after
-        ``?`` in request path, ``/users/list/?sort=True&type=name``
+        ``?`` in request path. ``/users/list/?sort=True&type=name``
 
         ::
 
@@ -94,9 +94,9 @@ class Request:
         return json.loads(body)
 
     def get_data(self):
-        """Returns data sent to server as ``bytes``,
+        """Returns data sent to server as ``bytes``.
         It is good to check :attr:`content_length` with
-        ``request.content_length`` before calling this method,
+        ``request.content_length`` before calling this method as
         content_length allows you to know size of the data
         and to avoid reading a very large data at once.
 
@@ -185,7 +185,7 @@ class Request:
                user_pics.save_as('/somepath')
 
         .. note::
-            This only work if the :attr:`request.method`
+            This only works if the :attr:`request.method`
             is POST, PUT or PATCH, and content_type is
             multipart/form-data.
             If not , it returns empty dict

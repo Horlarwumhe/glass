@@ -114,19 +114,19 @@ class Lexer:
 
 class Parser:
     def __init__(self, tokens):
-        self.tokens = tokens.copy()
+        self.tokens = list(reversed(tokens))
         self.tags = {}
         self.tags.update(default_tags)
 
     def next_token(self):
         try:
-            return self.tokens[0]
+            return self.tokens[-1]
         except IndexError:
             return None
 
     def get_next_token(self):
         try:
-            return self.tokens.pop(0)
+            return self.tokens.pop()
         except IndexError:
             return None
 
@@ -141,12 +141,12 @@ class Parser:
                     raise TemplateSyntaxError("expect %s" % ",".join(stop_at))
                 break
             if token.type == "ENDBLOCK":
-                self.tokens.insert(0, token)
+                self.tokens.append(token)
                 break
             if token.type == "BLOCK":
                 cmd, _ = token.clean_tag()
                 if cmd in stop_at:
-                    self.tokens.insert(0, token)
+                    self.tokens.append(token)
                     break
                 ret = self.parse_block(token)
             elif token.type == 'VAR':
@@ -161,7 +161,7 @@ class Parser:
             cmd = token.content.split(maxsplit=1)[0]
         except IndexError:
             raise TemplateSyntaxError('Empty block tag ', token)
-        self.tokens.insert(0, token)
+        self.tokens.append(token)
         try:
             ret = self.tags[cmd](self)
         except KeyError:

@@ -101,8 +101,8 @@ class FileLoader(TemplateLoader):
         self.path = list(path)
 
     def load_template(self, name):
-        """Load template the to render.
-        Returns the template source
+        """Load template to render.
+        Returns the template source.
         """
         if not self.path:
             # append both /path/to/{cwd}/templates
@@ -141,7 +141,7 @@ class FileLoader(TemplateLoader):
 class Environment:
     '''The main environment for templates. The environment stores
     tags and filter available to all templates and loader to load templates
-    from diffferent sources
+    from diffferent sources.
 
     :param cache: an object use to cache compiled templates.
       default ``None`` (dont cache)
@@ -176,7 +176,7 @@ class Environment:
         return template.compile()
 
     def get_template(self, template_name):
-        '''Gets template to render from file,
+        '''Gets template to render from file.
         Returns :class:`~Template`.
         ::
 

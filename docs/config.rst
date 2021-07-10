@@ -82,10 +82,9 @@ Internally used config values;
 
 *SESSION_COOKIE_DOMAIN*
 
-  domain to use for session cookie, default to ``None``
+  domain to use for session cookie. default to ``None``
      check `mozilla`_
 
-::
 
 *SESSION_COOKIE_SECURE*
 
@@ -96,7 +95,7 @@ Internally used config values;
 
 *SESSION_COOKIE_PATH*
 
-  ``path`` for session cookie, default to ``/``
+  ``path`` for session cookie. default to ``/``
 
      check `mozilla`_
 

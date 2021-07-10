@@ -13,9 +13,10 @@ log = logging.getLogger('glass.app')
 def encode_session(data, key=b'session-key'):
     """Encode current session data and sign it.
     This generate string to be used as cookie
+
     :param data: ``dict``, current session data
     :param key: ``str``, app.secret-key
-    returns: ``str``.
+    :returns: ``str``.
 
     """
     app_key = app.config['SECRET_KEY']

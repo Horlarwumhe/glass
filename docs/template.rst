@@ -10,7 +10,7 @@ Contents
    :local:
    
 
-This is the template that comes with :doc:`glass <glass>`
+This is the template that comes with :doc:`Glass <glass>`.
 
 Example
 ---------
@@ -73,13 +73,13 @@ see :ref:`create custom filter <custom-filter>` to create new template filter.
 
      {{user.name |lower}}
 
-using multiple filters
+using multiple filters;
 
 ::
 
     {{user.name | upper | lower | escape}}
 
-using block filter tag
+using block filter tag;
 
 ::
 
@@ -128,12 +128,12 @@ Traceback (most recent call last):
 OSError: Template not found C:\Users\ADMIN\Desktop\projects\glass\templates\index.htm
 >>>
 
-   The default template loader is class :class:`~glass.template.main.FileLoader`, which will look for the template in the current working directory and  folder ``templates``  in the current working directory.
+   The default template loader, class :class:`~glass.template.main.FileLoader`, will look for the templates in the current working directory and  folder ``templates``  in the current working directory.
 
    You can set different directory to find templates.
 
 
-   >>> from glass.templating import FileLoader
+   >>> from glass.template import FileLoader
    >>> from glass.template import Environment
    >>> env = Environment(loader=FileLoader('/path/to/templates'))
    >>> # or 
@@ -142,7 +142,7 @@ OSError: Template not found C:\Users\ADMIN\Desktop\projects\glass\templates\inde
 
 
 You can  create custom template loader.
-The loader class must define two methods ``load_template`` and ``check_if_modified``,
+The loader class must define two methods, ``load_template`` and ``check_if_modified``.
 ``load_template`` returns the template source to render while ``check_if_modified`` returns True if the template has been modified, False if not
 
 
@@ -462,7 +462,7 @@ userm********
 userm********
 >>> 
 
-or using decorator
+or using decorator;
 
 .. code-block:: python
 
@@ -505,28 +505,25 @@ lets create a simple tag that shows current time.
          {{now}}
 
 
-Note
+.. note::
 
-::
+     ``parser.get_next_token`` returns next token and remove
+     the token from token list
+     while ``.next_token``  next token without removing it. e.g. ``[token3,token2,token1 ]``
+     ``.next_token`` returns ``token1``
+     ``.get_next_token`` also returns ``token1``
+     but token list is now ``[token3,token2]``
+     ``.clean_tag`` is method of
+     class ``glass.temlate.parser.Token``
+     it returns the token command and argument
+     eg. ``{% if 1 > 7 %}``, then it returns
+     ``cmd, args = 'if', '1 > 7'``
+     if the token is not tag e.g. ``{{name}}``,
+     it returns empty string.
+     use ``.next_token`` to know the next token
+     and ``.get_next_token`` to remove the token from token list.
 
-     # parser.get_next_token returns next token and remove
-    # the token from token list
-    # while .next_token returns next token without removing it
-    # eg. 
-    # tokens = [token1,token2,token3]
-    # .next_token returns token1
-    # .get_next_token also returns token1
-    # but token list is now [token2, token3]
-    # .clean_tag is method of 
-    # class glass.temlate.parser.Token
-    # it returns the token command and argument
-    # eg. {% if 1 > 7 %}, then it returns
-    # cmd, args = 'if', '1 > 7'
-    # if the token is not tag, {{name}},
-    # it returns empty string
-    # use .next_token to know the next token
-    # and .get_next_token to remove the token from token list
-    # 
+    
 
 
 .. code:: python
@@ -677,7 +674,7 @@ create *Node* object
         def render(self,context,env=None):
             return self.body.render(context,env)
 
-Use the tag.
+use the tag;
 
 >>> source = '''
 ...    {% for user in users %}
@@ -713,14 +710,14 @@ Use the tag.
 
     <b>Hor</b> status is unknown
 
-The template ``Environment`` API is documented :class:`Environment <glass.template.main.Environment>`.
+See the  ``Environment`` API here :class:`Environment <glass.template.main.Environment>`.
 
 Using With :doc:`Glass <glass>`
 ================================
 
-To use the ``Environment`` class with glass, use :attr:`app.template_env <glass.app.GlassApp.template_env>`.
+To use the ``Environment`` class with Glass, use :attr:`app.template_env <glass.app.GlassApp.template_env>`.
 
-see :ref:`glass doc <using-template>` on how to use the template engine with glass app.
+see :ref:`Glass doc <using-template>` on how to use the template engine with Glass app.
 
 
 

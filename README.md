@@ -4,13 +4,25 @@ It comes with bultin template engine. It is micro-framework because it comes wit
 Glass  comes with builtin development server.
 
 ##### Installation
+
  Install from pypi;
+
 ```bash
 
   $ pip istall glass
 
 ```
+or clone from github;
 
+```bash
+
+  $ git clone https://github.com/horlarwumhe/glass.git
+  $ cd glass
+  $ pip install -r requirements.txt
+  $ python setup.py install
+
+
+```
 #####  Example
 
 ```py
@@ -32,6 +44,7 @@ Glass  comes with builtin development server.
 ```
 
 ##### Using Template
+
 Glass template syntax is very similar to django template.
 
 
@@ -54,35 +67,34 @@ Glass template syntax is very similar to django template.
 
 ```py
 
-  from glass import GlassApp
-  from glass import render_template,render_string
-  from glass import request,redirect
+from glass import GlassApp
+from glass import render_template,render_string
+from glass import request,redirect
 
-  app = GlassApp()
-  @app.route('/')
-  def home():
-    #
-    posts = get_all_posts()
-    return render_template('index.html',posts=posts)
+app = GlassApp()
+@app.route('/')
+def home():
+  posts = get_all_posts()
+  return render_template('index.html',posts=posts)
 
-  @app.route('/greet/<name>')
-  def greet(name):
-    template = '''
-    Hello {{name}}, welcome to {{request.host}}
-    '''
-    return render_string(template,name=name)
+@app.route('/greet/<name>')
+def greet(name):
+  template = '''
+  Hello {{name}}, welcome to {{request.host}}
+  '''
+  return render_string(template,name=name)
 
-  @app.route('/login',methods=["GET",'POST'])
-  def login():
-    if request.method == 'POST':
-      name = request.post.get('username')
-      password = request.post.get('password')
-      do_login(name,password)
-      return redirect('/')
-    else:
-      return render_template('login.html')
+@app.route('/login',methods=["GET",'POST'])
+def login():
+  if request.method == 'POST':
+    name = request.post.get('username')
+    password = request.post.get('password')
+    do_login(name,password)
+    return redirect('/')
+  else:
+    return render_template('login.html')
 
 ``` 
 #### Documentation
 
-The full docs is available on [readthedocs](https://glass.readthedocs.io).
+The full docs is available on [readthedocs](https://glassapp.readthedocs.io).

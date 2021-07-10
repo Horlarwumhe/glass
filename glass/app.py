@@ -70,7 +70,7 @@ class GlassApp:
         return Cache()
 
     def route(self, url_rule, methods='GET', **kwargs):
-        """Register a view func for URL as decorator
+        """Register a view function for URL as decorator
         ::
 
            @app.route('/')
@@ -101,9 +101,8 @@ class GlassApp:
 
     def before_request(self, func):
         """Register a function to run before each request.
-
-        For example, this can be used to open a database connection, or to load
-         logged in user from the session.
+           For example, this can be used to open a database connection, or to load
+           logged in user from   session.
 
         ::
 
@@ -163,7 +162,7 @@ class GlassApp:
         return func
 
     def error(self, error):
-        """Register a func to call when an error occurs in the
+        """Register a function to call when an error occurs in the
         application. The function can be registered with code or
         exception class. The function takes the exception class
         as argument.

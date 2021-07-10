@@ -19,7 +19,7 @@ class BaseResponse:
 
     Use :class:`glass.response.Response` or its subclasses
 
-    :param content_type: response header `Content-Type`
+    :param content_type: response `Content-Type`
     :param status_code: response http status code
     :param charset: content-type charset, default utf-8
     :param headers: ``dict`` or ``list`` of tuples, response headers
