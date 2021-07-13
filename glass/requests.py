@@ -12,6 +12,18 @@ from glass.utils import _thread_local, cached_property
 logger = logging.getLogger('glass.app')
 
 
+def _parse_form_data_(request, environ):
+    if hasattr(request, 'app'):
+        max_length = request.app.config['MAX_CONTENT_LENGTH']
+        if max_length and request.content_length > int(max_length):
+            raise RequestTooLarge()
+    try:
+        form, files = parse_form_data(environ, strict=True)
+    except multipart.MultipartError as e:
+        raise BadRequest(e)
+    return form, files
+
+
 class Request:
     """This implement HTTP request to access
     incoming request data.
@@ -192,13 +204,7 @@ class Request:
             object
 
         """
-        try:
-            form, files = parse_form_data(self.environ, strict=True)
-        except multipart.MultipartError as e:
-
-            raise BadRequest(e)
-        # cache post, to avoid parsing again
-        # if request.post is called
+        form, files = _parse_form_data_(self, self.environ)
         self.__storage__['post'] = form
         return files
 
@@ -215,15 +221,7 @@ class Request:
                 request.post.get('username')
                 request.post.get('password')
         """
-        # max_length = app.config['MAX_CONTENT_LENGTH']
-        # if max_length and self.content_length > max_length:
-        #     raise RequestTooLarge()
-        try:
-            form, files = parse_form_data(self.environ, strict=True)
-        except multipart.MultipartError as e:
-            raise BadRequest(e)
-        # cache files, to avoid parsing again
-        # if request.files is called
+        form, files = _parse_form_data_(self, self.environ)
         self.__storage__['files'] = files
         return form
 
