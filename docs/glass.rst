@@ -877,7 +877,7 @@ Use decorator :attr:`~glass.app.GlassaApp.template_env` to register tags;
     def tag_parser(parser):
       # parse the tag here
 
-    @app.template_env('myblocktag')
+    @app.template_env.tag('myblocktag')
     def parse_tag(parser):
        # parse the tag here
 

@@ -490,9 +490,9 @@ The tag can be registered with the code example.
    def tag_parser(parser):
       # parse the tag here
 
-  # or manually register the tag
-  def tag_parser(parser):
-     pass
+   # or manually register the tag
+   def tag_parser(parser):
+       pass
 
   env = Environment(tags={'tagname':tag_parser})
 
