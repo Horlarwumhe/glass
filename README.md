@@ -3,7 +3,7 @@ It comes with bultin template engine. It is micro-framework because it comes wit
 
 Glass  comes with builtin development server.
 
-##### Installation
+## Installation
 
  Install from pypi;
 
@@ -23,7 +23,7 @@ or clone from github;
 
 
 ```
-#####  Example
+##  Example
 
 ```py
 
@@ -43,7 +43,7 @@ or clone from github;
 
 ```
 
-##### Using Template
+## Using Template
 
 Glass template syntax is very similar to django template.
 

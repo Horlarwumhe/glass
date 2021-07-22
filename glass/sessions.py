@@ -163,6 +163,7 @@ class SessionManager:
             if not session.modified:
                 return
             name = app.config['SESSION_COOKIE_NAME']
+            #TODO: add path,domain to delete_cookie
             response.delete_cookie(name)
             return
         cookie = encode_session(data, key)

@@ -375,7 +375,6 @@ class BlockNode(Node):
 class NodeList(Node):
     def __init__(self, nodelist):
         self.nodelist = nodelist
-        self.nodelist_temp = None
         super().__init__()
 
     def render(self, context, env=None):

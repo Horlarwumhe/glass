@@ -117,7 +117,7 @@ class FileLoader(TemplateLoader):
             with open(path, 'r') as file:
                 content = file.read()
             return content
-        raise OSError("Template not found %s tried %s" %
+        raise OSError("Template not found %s, tried %s" %
                       (name, ' ,'.join(self.path)))
 
     def check_if_modified(self, name):
@@ -173,7 +173,8 @@ class Environment:
         >>> template.render({'user':'Horlar'})
         """
         template = Template(string, env=self)
-        return template.compile()
+        template.compile()
+        return template
 
     def get_template(self, template_name):
         '''Gets template to render from file.
@@ -198,7 +199,7 @@ class Environment:
                     return template
         load_template = self.loader.load_template(template_name)
         template = Template(load_template, env=self)
-        template = template.compile()
+        template.compile()
         if self.cache is not None:
             self.cache.set(template_name, template)
         return template

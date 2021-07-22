@@ -43,7 +43,7 @@ class WSGIHeader(dict):
     def _fail(self, *args):
         raise TypeError('Read only header')
 
-    __setitem__ = __delitem__ = _fail
+    __setitem__ = __delitem__ = pop = _fail
 
     def __iter__(self):
         for key, value in self.environ.items():

@@ -99,6 +99,7 @@ class Lexer:
                 content = token[2:-2]
                 content = self.clean(content)
                 if re.search('end[a-z]+', content):
+                    #TODO: differentiate between block and endblock
                     tokens.append(Token('BLOCK', self.clean(content), lineno))
                 else:
                     tokens.append(Token('BLOCK', self.clean(content), lineno))

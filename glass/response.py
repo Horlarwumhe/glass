@@ -297,7 +297,6 @@ def flash(message, category=None):
 
 def messages():
     msgs = session.get('__flash__', [])
-    r = []
     for msg in msgs:
         yield msg
     msgs.clear()
@@ -346,4 +345,3 @@ get_session_messages = flash_messages = messages
 #     msgs.clear()
 
 # ####------------------------------------------------------###
-
