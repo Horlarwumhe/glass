@@ -3,7 +3,7 @@ file = open('README.md')
 description = file.read()
 file.close()
 setuptools.setup(
-    name="glass",
+    name="glass-web",
     version="0.0.1",
     author="Horlarwumhe",
     author_email="amachiever4real@gmail.com",
@@ -16,7 +16,10 @@ setuptools.setup(
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
-        'Topic :: Web Development'
+        'Topic :: Internet :: WWW/HTTP :: WSGI',
+        'Topic :: Internet :: WWW/HTTP :: WSGI :: Server',
+        'Topic :: Internet :: WWW/HTTP :: WSGI :: Application',
+        'Topic :: Software Development :: Libraries :: Application Frameworks'
 
     ],
     python_requires='>=3.7',

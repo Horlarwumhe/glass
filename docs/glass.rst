@@ -33,7 +33,7 @@ First, install from pypi:
 
 ::
 
-   $ pip install glass
+   $ pip install glass-web
 
 You can clone it from github with git.
 

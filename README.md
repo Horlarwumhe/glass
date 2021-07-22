@@ -9,7 +9,7 @@ Glass  comes with builtin development server.
 
 ```bash
 
-  $ pip istall glass
+  $ pip istall glass-web
 
 ```
 or clone from github;
