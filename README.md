@@ -48,7 +48,7 @@ or clone from github;
 Glass template syntax is very similar to django template.
 
 
-```py
+```html
   # index.html
   <html>
   <title> {% block title %} Blog {% endblock %}</title>
