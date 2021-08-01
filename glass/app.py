@@ -188,13 +188,14 @@ class GlassApp:
 
         return decorator
 
-    def run(self, host='127.0.0.1', port=8000, auto_reload=False):
+    def run(self, host='127.0.0.1', port=8000, debug=False, auto_reload=False):
         """Run the application development server.
 
         :param host: ip address to listen on. default to localhost ``127.0.0.1``
         :param port: port for the server to listen. default to ``8000``
         :param auto_reload: enable reloader. reload the server when the
                app source files change. default to ``False``
+        :param debug: run the app in debug mode. default to ``False``
 
         ::
 
@@ -204,6 +205,7 @@ class GlassApp:
                 return "Hello"
             app.run()
         """
+        self.config['DEBUG'] = debug
         from glass.server import GlassServer
         GlassServer().run_app(self, host, port, auto_reload)
 
