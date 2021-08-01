@@ -22,21 +22,8 @@ FILTER = re.compile(r'''
 \s*\|\s*\w+
 ''', re.VERBOSE)
 
-operators = {
-    'in': operator.contains,
-    '==': operator.eq,
-    '>': operator.gt,
-    '<': operator.lt,
-    '>=': operator.ge,
-    '<=': operator.le,
-    '!=': operator.ne,
-    'and': operator.and_,
-    '+': operator.add,
-    '-': operator.sub,
-    '*': operator.mul,
-    '/': operator.floordiv,
-    'not': operator.not_
-}
+operators = ('in', '==', '>', '<', '>=', '<=', '!=', 'and', '+', '-', '*', '/',
+             'not')
 
 
 class TemplateSyntaxError(Exception):
@@ -53,6 +40,7 @@ def register_tag(name):
     def inner(func):
         default_tags[name] = func
         return func
+
     return inner
 
 
@@ -164,12 +152,14 @@ class Parser:
             raise TemplateSyntaxError('Empty block tag ', token)
         self.tokens.append(token)
         try:
-            ret = self.tags[cmd](self)
+            tag_parser = self.tags[cmd]
         except KeyError:
             if re.search('end[a-z]+', cmd):
                 raise TemplateSyntaxError("Unexpected token %s" % token, token)
-            raise TemplateSyntaxError('Uknown tag %s' % token, token)
-        return ret
+            raise TemplateSyntaxError(
+                'Uknown tag %s. Did you forget to register this tag?' % token,
+                token)
+        return tag_parser(self)
 
     def skip_token(self, n=1):
         for _ in range(n):
@@ -307,6 +297,8 @@ def for_parse(parser):
         raise TemplateSyntaxError('for loop expect in', token)
     loopvars = args[:match.start()]
     iter_object = args[match.end():].strip()
+    #TODO: docs
+    #split and join to remove umneccesary space
     loopvars = ''.join(loopvars.split()).rstrip(',')
     loopvars = loopvars.split(',')
     for var in loopvars:
@@ -338,9 +330,8 @@ def parse_extend(parser):
     args = args.split()
     if len(args) > 1 or not args:
         raise TemplateSyntaxError('extends requires one arg', token)
-    template = args[0].strip('"').strip("'")
+    template = parse_variable(args[0])
     nodelist = parser.parse()
-
     return Node.ExtendNode(template, nodelist)
 
 

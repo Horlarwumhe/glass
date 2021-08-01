@@ -59,8 +59,8 @@ class TextNode(Node):
 
 
 class VarNode(Node):
-    def __init__(self, var, funcs=None):
-        self.var = var
+    def __init__(self, var_name, funcs=None):
+        self.var_name = self.var = var_name
         self.funcs = funcs or []
         self.args = ()
         super().__init__()
@@ -80,7 +80,7 @@ class VarNode(Node):
         If it is not part of tag eg {{name}}, then render will be called
         '''
         if not self.var:
-            return ''
+            return None
         var = self.var.replace('"', '\'')
         if var.startswith("'"):
             i = var.index("'", 1)
@@ -92,7 +92,7 @@ class VarNode(Node):
             var, *attrs = var.split('.')
         var = self.resolve(var, ctx)
         if var is None:
-            return ''
+            return None
         if hasattr(var, '__call__'):
             var = var()
         for attr in attrs:
@@ -208,8 +208,9 @@ class ForNode(Node):
                 if item_len != len(loopvars):
                     raise TypeError(
                         "For loop sequence '%s' returned %s value(s),"
-                        " but loop variable has %s values(s)"
-                        % (self.iter_object.var, item_len, len(loopvars)))
+                        " but loop variable has %s values(s), (%s)" %
+                        (self.iter_object.var, item_len, len(loopvars),
+                         ','.join(loopvars)))
                 key_value = zip(loopvars, item)
                 context.update(key_value)
             else:
@@ -275,7 +276,6 @@ class ConditionNode(Node):
             return False
         except KeyError:
             # this should not occur.
-            #TODO: do this at template parsing phase not rendering time
             raise TypeError('Unknown operator "%s"' % self.op)
 
 
@@ -336,7 +336,12 @@ class ExtendNode(Node):
 
     def render(self, context, env=None):
         if env:
-            parent = env.get_template(self.template)
+            template = self.template.eval(context, env)
+            if template is None:
+                # {% extends name %}
+                msg = "Couldn't find template refers to as '%s' in extend tag." % self.template.var_name
+                raise TemplateSyntaxError(msg)
+            parent = env.get_template(template)
             parent_nodelist = parent.nodelist
             parent_blocks = parent_nodelist.get_node_by_type(BlockNode)
             blocks = self.nodelist.get_node_by_type(BlockNode)

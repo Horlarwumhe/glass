@@ -52,7 +52,6 @@ def _render_stl_string(string, context, **kwargs):
     env = app.template_env
     context.update(kwargs)
     template = env.from_string(string)
-    print(context.__class__)
     return template.render(context)
 
 
