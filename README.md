@@ -39,7 +39,7 @@ or clone from github;
       return 'Hello {}'.format(name)
 
   app.run()
-  #app.run(host='127.0.0.1',port=8000,auto_reload=True)
+  #app.run(host='127.0.0.1',port=8000,debug=True,auto_reload=True)
 
 ```
 
