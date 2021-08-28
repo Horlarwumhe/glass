@@ -52,7 +52,9 @@ Your first code;
 .. code:: python
 
    from glass import GlassApp
+
    app = GlassApp()
+
    @app.route('/')
    def home():
        return 'This is home page'
@@ -103,6 +105,7 @@ Routing
 .. code:: python
 
    from glass import GlassApp
+   
    app = GlassApp()
    @app.route('/')
    def home():
@@ -111,6 +114,7 @@ Routing
 .. code:: python
 
    from glass import GlassApp
+
    app = GlassApp()
    @app.route('/login/')
    def login():
@@ -120,6 +124,7 @@ Routing
    def do_get():
        # for GET method
        return 'Hello'
+
    @app.post('/post/')
    def do_post():
        # for POST method
@@ -157,9 +162,11 @@ The url rule can take optional converter.
      def read(post_id):
          assert isinstance(post_id,int)
          return 'Hello'
+
      @app.route('/view/<str:username>')
      def view(username):
         return username
+
      @app.route('/view/<path:file>')
      def read_file(file):
         return FileResponse(file)
@@ -179,6 +186,7 @@ By default, each url function allow ``GET`` request method. Glass will return ``
 
 
     from glass import request
+
     @app.route('/login/',methods=['GET','POST','PUT'])
     def login():
       if request.method == 'POST':
@@ -372,6 +380,7 @@ Use this decorator to register function(s) to call before each app request. This
 ::
 
    from glass import GlassApp, request,session
+
    app = GlassApp()
 
    @app.route('/')
@@ -425,11 +434,15 @@ You  can set  cookies and also get the cookies sent to the server. To set cookie
 .. code:: python
 
    from glass import Response
+
    @app.route('/')
    def home():
        resp = Response('Hello')
        resp.set_cookie('cookie1','value1')
        resp.set_cookie('cookie2','value2')
+       resp.set_cookie('cookie3','value3',
+           max_age=989,domain='domain.com',
+           path='/',httponly=False,secure=False)
        return resp
 
 :meth:`~glass.response.BaseResponse.set_cookie` accepts the following keywords
@@ -447,6 +460,7 @@ Get the cookies sent to the server;
 ::
 
    from glass import request
+
    @app.route('/')
    def home():
        cookie = request.cookies.get('cookie_name')

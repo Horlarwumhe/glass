@@ -42,7 +42,7 @@ class Request:
     @cached_property()
     def path(self):
         """HTTP request path"""
-        return self.environ.get("PATH_INFO")
+        return self.environ.get("PATH_INFO",'')
 
     @cached_property()
     def cookies(self):

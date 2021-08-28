@@ -1,4 +1,3 @@
-
 class HTTPCookie:
     def __init__(self):
         self._cookies = {}

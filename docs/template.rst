@@ -162,7 +162,7 @@ The loader class must define two methods, ``load_template`` and ``check_if_modif
 'this is faq'
 >>> t = env.get_template('index.html')
 >>> t.render({})
-'this is faq'
+'this is index'
 >>> 
 
 Template Caching
@@ -713,7 +713,7 @@ use the tag;
 See the  ``Environment`` API here :class:`Environment <glass.template.main.Environment>`.
 
 Using With :doc:`Glass <glass>`
-================================
+---------------------------------
 
 To use the ``Environment`` class with Glass, use :attr:`app.template_env <glass.app.GlassApp.template_env>`.
 

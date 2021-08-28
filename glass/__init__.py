@@ -1,8 +1,8 @@
-from glass.sessions import session
-from glass.requests import request
-from glass.response import Response
-from glass.app import GlassApp
+from .sessions import session
+from .requests import request
+from .response import Response
+from .app import GlassApp
 from ._helpers import current_app
-from glass.response import redirect, flash, get_session_messages
+from .response import redirect, flash, get_session_messages
 
-from glass.templating import render_template, render_string
+from .templating import render_template, render_string
