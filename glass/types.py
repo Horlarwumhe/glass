@@ -46,10 +46,11 @@ class WSGIHeader(dict):
     __setitem__ = __delitem__ = pop = _fail
 
     def __iter__(self):
+        #fix HTTP_HOST return Ost
         for key, value in self.environ.items():
             key = key.replace('_', '-')
             if key.startswith('HTTP-'):
-                key = key.lstrip('HTTP-')
+                key = key.lstrip('HTTP').lstrip('-')
             key = key.title()
             yield key, value
 
