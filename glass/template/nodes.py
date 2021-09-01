@@ -2,6 +2,7 @@ import ast
 import logging
 import operator
 import re
+import types
 import warnings
 
 logger = logging.getLogger('glass.template')
@@ -93,7 +94,7 @@ class VarNode(Node):
         var = self.resolve(var, ctx)
         if var is None:
             return None
-        if hasattr(var, '__call__'):
+        if isinstance(var,(types.MethodType,types.FunctionType)):
             var = var()
         for attr in attrs:
             if not attr:
@@ -101,7 +102,7 @@ class VarNode(Node):
             attr = attr.strip()
             if hasattr(var, attr):
                 func = getattr(var, attr)
-                if hasattr(func, '__call__'):
+                if isinstance(func,(types.MethodType,types.FunctionType)):
                     var = func()
                 else:
                     var = func
@@ -184,10 +185,10 @@ class IfNode(Node):
 
 class ForNode(Node):
     def __init__(self, var, iter_object, body, else_=None):
+        super().__init__()
         self.iter_object = iter_object
         self.body = body
         self.loopvars = self.var = var
-        super().__init__()
         self.else_ = else_
 
     def render(self, context, env=None):
@@ -268,7 +269,7 @@ class ConditionNode(Node):
             return bool(lhs)
         try:
             # {% if x op y %}
-            # op is supported operators
+            # op is supported operator
             return operators[self.op](lhs, rhs)
         except TypeError:
             # probably datatype issue,
@@ -319,13 +320,17 @@ class FilterNode(Node):
 
 
 class IncludeNode(Node):
-    def __init__(self, template_name):
-        self.template_name = template_name
+    def __init__(self, template):
+        self.template = template
 
     def render(self, context, env=None):
+        template_name = self.template.eval(context, env)
+        if template_name is None:
+            msg = "Couldn't find template refers to as '%s' in include tag." % self.template.var_name
+            raise TemplateSyntaxError(msg)
         if env:
-            template = env.get_template(self.template_name)
-            return template.render(context, env)
+            template = env.get_template(template_name)
+            return template.render(context)
         return ''
 
 
