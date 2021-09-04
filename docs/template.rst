@@ -5,9 +5,9 @@ Template Engine
 
 Contents
 
-.. contents::
-   :depth: 2
-   :local:
+.. .. contents::
+..    :depth: 2
+..    :local:
    
 
 This is the template that comes with :doc:`Glass <glass>`.

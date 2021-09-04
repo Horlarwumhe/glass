@@ -18,11 +18,11 @@ This page shows introduction to Glass. The content of this page is short, as Gla
    :caption: contents:
 
 
-On This Page ...
+.. On This Page ...
 
-.. contents::
-   :depth: 2
-   :local:
+.. .. contents::
+..    :depth: 2
+..    :local:
 
 
 Introduction
@@ -180,6 +180,39 @@ The url rule can take optional converter.
       - If the url rule ends with slash e.g. ``/user/login/``, user using this ``/user/login`` will be redirected to the original url ``/user/login/``
 
 
+Custom Converter.
+
+You can write converter to match this (``/1,2,3,4,4``) and convert it to list of integers.
+
+
+::
+
+
+   #the converter function
+
+   def int_list(values):
+       values = values.strip()
+       return list(map(int,values))
+
+   app = GlassApp()
+   # register the converter
+   # first argument is the converter name
+   # second argument is regex for the converter
+   # third argument is the callback function
+
+   app.url_converter('int_list',r'(\d+\-?)',int_list)
+   #this will match integers seperated by - (1-2-78-3)
+   #
+   #http://domain.com/nums/1-23-34
+
+   @app.route('/nums/<int_list:values>')
+   def test(values):
+       assert isinstance(values,list)
+       for i in values:
+           assert isinstance(i,int)
+        return "Hello"
+
+
 By default, each url function allow ``GET`` request method. Glass will return ``405 Method Not Allowed`` if any other request method is used. You need to provide other methods to the view.
 
 ::
@@ -242,6 +275,8 @@ and the response dict will be converted to json.
    def home():
        return {'name':'username','id':2},200
        # returning code is optional
+
+.. _using-response:
 
 Response Object
 -----------------
@@ -426,6 +461,104 @@ Use this decorator to register a fuction(s) to call after each request.
 The function takes one argument, :class:`~glass.response.Response` object and returns the response object.
 
 
+Mounting The App
+------------------
+
+When handling request,Glass pushes the application to its internal stack (``list``) and bind :class:`request <glass.requests.request>` to the ``environ`` from the ``wsgi`` web server. Then, you can access current app and request from any where in the app, as long as there is active request. Likewise, some functions in Glass requires active http request to work. Functions like :func:`render_template`
+
+::
+
+     from glass import GlassApp, current_app,render_template
+
+     app = GlassApp()
+
+     @app.route('/')
+     def home():
+
+        headers = request.headers
+        config = current_app.config
+        return render_template("index.html")
+
+The following will raise ``RuntimeError``.
+
+::
+
+    from glass import GlassApp, current_app,render_template
+
+     app = GlassApp()
+
+     # raise RuntimeError
+     res = render_template('index.html')
+
+    # raise RuntimeError
+    host = request.host
+
+    # raise RuntimeError
+    db = current_app.config("DB_ENGINE")
+
+To use avoid the errors above, you can manually mount the app.
+
+::
+
+     from glass import GlassApp, current_app,render_template
+
+     app = GlassApp()
+
+     with app.mount():
+         render_template('index.html')
+         current_app.config is app.config
+
+
+
+    with app.mount():
+        init_db()
+
+
+You can pass ``environ`` argument to :func:`mount` to use :class:`request <glass.requests.request>`
+
+::
+
+   from glass import GlassApp, current_app,render_template
+
+     app = GlassApp()
+     environ = {} # wsgi environ
+     with app.mount(environ):
+         request.headers
+         request.host
+
+current_app and request are only available from thread where they are initailize. If you create another thread, then you mount the app again.
+
+
+::
+
+
+     from glass import GlassApp, current_app,render_template
+     from threading import Thread
+
+     app = GlassApp()
+     @app.route('/login')
+     def login():
+        login_user(user)
+        Thread(target=send_login_mail,args=(request.environ,user)).start()
+        return "hello"
+
+
+    def send_login_mail(environ,user):
+        # this is another thread, re-mount the app
+
+        with app.mount(environ):
+           body = render_template('login_email.html',user=user,now=now)
+           send_mail(user.email,body)
+
+::
+
+   # login_email.html
+
+   <h3> Hello {{user.username}}, you login at {{now}} from
+   browser {{request.user_agent}} ip address: {{request.environ.REMOTE_ADDR}} </h3>
+
+
+
 
 Working With Cookies
 -----------------------
@@ -580,6 +713,8 @@ Message Flashing
 ::
 
    from glass import GlassApp, flash
+   from glass.templating import render_template as render
+
    @app.route('/')
    def home():
       return render('index.html')
@@ -734,6 +869,7 @@ The template syntax is very similar to django template.
 
      from glass import render_template as render, import render_string
      from glass.response import Response
+
      @app.route('/')
      def home():
        return render('index.html',context={})
@@ -744,6 +880,7 @@ The template syntax is very similar to django template.
             Hello <b> {{user}} </b>
         '''
          return render_string(template,user=user)
+
      @app.route('/login',methods=['GET',"POST"])
      def login():
         name = email = ''
@@ -753,17 +890,44 @@ The template syntax is very similar to django template.
         res = render('login.html',name=name,email=email)
         return Response(res)
 
+You can Use
+::
+
+    from glass.response import TemplateResponse
+
+    app = GlassApp()
+    @app.route('/index')
+    def login():
+        name = email = ''
+        if request.method == 'POST':
+            name = request.post.get('name')
+            email = request.post.get('email')
+        TemplateResponse('login.html',name=name,email=email)
+
+:func:`TemplateResponse`  takes same arguments as :ref:`Response <using-response>`
+
+::
+
+       TemplateResponse('login.html',name=name,email=email,
+       status_code=200,headers={'header':'value'})
+
+
 .. code:: html
 
       <!-- file login.html -->
-      <body>
+     <body>
         {% if name %}
           <div> Hello {{name}} </div>
           <div> Your email is {{email}} </div>
         {%else %}
            Hello guest
         {% endif %}
-      <body>
+    <form method='POST'>
+        <input type='text' name='name'>
+        <input type='email' name='email'>
+        <button>submit</button>
+    </form>
+    <body>
 
 
 
