@@ -10,6 +10,7 @@ from glass.routing import Router, Rule
 from glass.templating import AppTemplateEnviron, AppTemplateLoader, Cache
 from glass.templating import JinjaEnvironment, JinjaFileLoader
 from glass.utils import cached_property
+from ._helpers import app_stack
 
 logger = logging.getLogger('glass.app')
 stream = logging.StreamHandler()
@@ -188,6 +189,9 @@ class GlassApp:
 
         return decorator
 
+    def url_converter(self,name,regex,func):
+        self.router.add_converter(name,regex,func)
+
     def run(self, host='127.0.0.1', port=8000, debug=None, auto_reload=False):
         """Run the application development server.
 
@@ -209,6 +213,13 @@ class GlassApp:
             self.config['DEBUG'] = bool(debug)
         from glass.server import GlassServer
         GlassServer().run_app(self, host, port, auto_reload)
+
+    def mount(self, environ=None):
+        app_stack.push(self)
+        if environ is not None:
+            request.bind(environ)
+            self.session_cls.open()
+        return app_stack
 
     def _call_before_request(self):
         for func in self.before_request_funcs:
@@ -234,7 +245,8 @@ class GlassApp:
             method = environ.get("REQUEST_METHOD", 'GET')
             if rule.url_rule.endswith('/'):
                 if not environ['PATH_INFO'].endswith('/'):
-                    return Redirect(environ['PATH_INFO'] + '/')
+                    return Redirect(environ['PATH_INFO'] + '/',
+                                    status_code=307)
             callback = rule.get_callback(method)
             response = self._call_before_request()
             if not response:
@@ -306,9 +318,10 @@ class GlassApp:
     def _get_response(self, environ):
         request.bind(environ)
         request.app = self
-        self.session_cls.open()
-        response = self._call_callback(environ)
-        self.session_cls.save(response)
+        with self.mount():
+            self.session_cls.open()
+            response = self._call_callback(environ)
+            self.session_cls.save(response)
         return response
 
     def __call__(self, environ, start_response):

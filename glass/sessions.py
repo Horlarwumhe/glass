@@ -7,6 +7,7 @@ from glass._helpers import current_app as app
 from glass.requests import request
 from glass.utils import _thread_local
 
+
 log = logging.getLogger('glass.app')
 
 
@@ -63,7 +64,7 @@ class Session(dict):
     modified = _thread_local()
 
     def __init__(self, data=None):
-        self.session_data = data
+        self.data = data
         self.modified = False
 
     def __getitem__(self, key):
@@ -102,6 +103,7 @@ class Session(dict):
 
     def bind(self, data):
         self.session_data = data
+        self.modified = False
 
     def __len__(self):
         return len(self.session_data)
