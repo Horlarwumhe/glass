@@ -4,10 +4,10 @@ import re
 from . import nodes as Node
 
 TOKEN_REGEX = re.compile(
-    '''
-   (\\{%.*?%\\}|
-   \\{\\{.*?\\}\\}|
-   \\{\\#.*?\\#\\}
+    r'''
+   (\{%.*?%\}|
+   \{\{.*?\}\}|
+   \{\#.*?\#\}
    )''', re.VERBOSE)
 
 VAR = re.compile(r'''
@@ -291,7 +291,7 @@ def for_parse(parser):
     body = parser.parse(stop_at=('endfor', 'else'))
     else_ = else_parse(parser, ('endfor', ))
     parser.skip_token(1)
-    bits = args.split()
+    # bits = args.split()
     match = re.search(r'\b(in)\b', args)
     if not match:
         raise TemplateSyntaxError('for loop expect in', token)
@@ -363,6 +363,10 @@ def parse_block(parser):
 
 @register_tag('include')
 def parse_include(parser):
-    _, name = parser.get_next_token().clean_tag()
-    name = name.split()[0]
+    token = parser.get_next_token()
+    _, args = token.clean_tag()
+    args = args.split()
+    if not args:
+        raise TemplateSyntaxError('include tag requires atleast one arg', token)
+    name = parse_variable(args[0])
     return Node.IncludeNode(name)

@@ -39,11 +39,16 @@ def _thread_local():
     '''
     ls = threading.local()
 
-    def fget(_):
+    def fget(obj):
         try:
             return ls.var
         except AttributeError:
-            raise RuntimeError("Request context not initialized.")
+            if obj.__class__.__name__ in ('Request','Session'):
+                raise RuntimeError(
+                    "Request context not initialized. "
+                    "This means you are trying to use function that "
+                    "requires HTTP request")
+            raise 
 
     def fset(_, value):
         ls.var = value
@@ -61,6 +66,6 @@ def encode(value, encoding='utf-8'):
 
 
 def decode(value, encoding='utf-8'):
-    if isinstance(value, (bytes,bytearray)):
+    if isinstance(value, (bytes, bytearray)):
         return value.decode(encoding)
     return value

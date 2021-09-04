@@ -1,6 +1,6 @@
 from glass.template import Environment, FileLoader
 from glass._helpers import current_app as app
-from glass.response import flash_messages
+from glass._helpers import flash_messages
 
 try:
     import jinja2

@@ -7,16 +7,17 @@ from multipart import parse_form_data
 
 from glass.exception import BadRequest, RequestTooLarge
 from glass.types import WSGIHeader
+from glass._helpers import current_app
 from glass.utils import _thread_local, cached_property
 
 logger = logging.getLogger('glass.app')
 
 
-def _parse_form_data_(request, environ):
-    if hasattr(request, 'app'):
-        max_length = request.app.config['MAX_CONTENT_LENGTH']
-        if max_length and request.content_length > int(max_length):
-            raise RequestTooLarge()
+def _parse_form_data_(environ):
+
+    max_length = current_app.config['MAX_CONTENT_LENGTH']
+    if max_length and request.content_length > int(max_length):
+        raise RequestTooLarge()
     try:
         form, files = parse_form_data(environ, strict=True)
     except multipart.MultipartError as e:
@@ -143,6 +144,11 @@ class Request:
         #FIXME: HTTP_REQUEST_METHOD or REQUEST_METHOD
         return self.environ.get("REQUEST_METHOD", '').upper()
 
+
+    @property
+    def user_agent(self):
+        return self.environ.get('HTTP_USER_AGENT','')
+
     @property
     def stream(self):
         """Body of the request
@@ -204,7 +210,7 @@ class Request:
             object
 
         """
-        form, files = _parse_form_data_(self, self.environ)
+        form, files = _parse_form_data_(self.environ)
         self.__storage__['post'] = form
         return files
 
@@ -221,7 +227,7 @@ class Request:
                 request.post.get('username')
                 request.post.get('password')
         """
-        form, files = _parse_form_data_(self, self.environ)
+        form, files = _parse_form_data_(self.environ)
         self.__storage__['files'] = files
         return form
 

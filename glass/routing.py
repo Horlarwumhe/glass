@@ -37,7 +37,7 @@ class Rule:
 
 
 class Router:
-    def __init__(self):
+    def __init__(self,app=None):
         self.rules = []
         self._url_caches = {}
 
@@ -123,3 +123,11 @@ class Router:
                 continue
             applied[param] = func(value)
         return applied
+
+    def add_converter(self,name,regex,func):
+        try:
+            re.compile(regex)
+        except re.error:
+            raise ValueError('bad re syntax %s'%regex)
+        CONVERTERS_REGEX[name] = regex
+        CONVERTERS[name] = func

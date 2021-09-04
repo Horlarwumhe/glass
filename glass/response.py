@@ -10,6 +10,14 @@ from glass import http, utils
 from glass.cookie import HTTPCookie
 from glass.types import Header
 from glass.sessions import session
+from glass.templating import render_template
+
+
+def _charset_from_content_type(text):
+    match = re.search(r';\s*charset=(?P<charset>[^\s;]+)', text, re.I)
+    if match:
+        return match.group(1)
+    return
 
 
 class BaseResponse:
@@ -37,16 +45,27 @@ class BaseResponse:
             self.status_code = status_code
         self.cookies = HTTPCookie()
         self.headers = Header()
+        self.content_type = content_type or self.content_type
         self.charset = charset or self.charset
         if headers:
             if isinstance(headers, dict):
                 headers = headers.items()
             for name, value in headers:
                 self.set_header(name, value)
-        header_content_type = self.headers.get("Content-Type")
-        if not header_content_type:
-            self.headers['Content-Type'] = content_type \
-            or self.content_type + '; charset=%s' %self.charset
+
+        content_type = self.headers.get("Content-Type")
+        if content_type:
+            # content_type from header is used if present
+            self.content_type = content_type
+        charset = _charset_from_content_type(self.content_type)
+        if charset:
+            # charset from content_type is used if present
+            self.charset = charset
+        else:
+            self.content_type = (self.content_type +
+                                 '; charset=%s' % self.charset)
+
+        self.headers["Content-Type"] = self.content_type
 
     def set_cookie(self, name, value, **kw):
         """Add cookie to the response that will be
@@ -211,7 +230,7 @@ class FileResponse(Response):
         headers = kwargs.get('headers', {})
         if isinstance(headers, list):
             headers = dict(headers)
-        content_type = kwargs.get("content_type")
+        content_type = headers.get('Content-Type') or kwargs.get("content_type")
         if content_type:
             headers['Content-Type'] = content_type
         headers = self.add_headers(headers)
@@ -230,7 +249,7 @@ class FileResponse(Response):
             if mime_type:
                 content_type = mime_type
                 if encoding:
-                    content_type = mime_type + '; charset=' % encoding
+                    content_type = mime_type + '; charset=%s' % encoding
             else:
                 content_type = 'application/octet-stream'
             headers['Content-Type'] = content_type
@@ -242,6 +261,21 @@ class FileResponse(Response):
             if not r:
                 return
             yield r
+
+
+class TemplateResponse(Response):
+    def __init__(self, template, context=None, **kwargs):
+        status_code = kwargs.pop('status_code', 200)
+        charset = kwargs.pop('charset', '')
+        headers = kwargs.pop('headers', None)
+        kwargs.pop('content_type', '')
+        content_type = 'text/html'
+        content = render_template(template, context, **kwargs)
+        super().__init__(content,
+                         status_code=status_code,
+                         charset=charset,
+                         headers=headers,
+                         content_type=content_type)
 
 
 class StaticResponse(FileResponse):
@@ -304,7 +338,6 @@ def messages():
 
 get_session_messages = flash_messages = messages
 
-
 # # TODO:
 
 # class _Flash:
@@ -324,7 +357,6 @@ get_session_messages = flash_messages = messages
 #         for msg in messages:
 #             yield msg
 
-
 # def _flash(message, category=None):
 #     flashes = session.get('__flash__', None)
 #     if not flashes:
@@ -335,7 +367,6 @@ get_session_messages = flash_messages = messages
 #         flashes[category].append(message)
 #     else:
 #         flashes[category] = [message]
-
 
 # def __messages():
 #     msgs = session.get('__flash__', [])
