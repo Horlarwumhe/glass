@@ -94,7 +94,7 @@ class VarNode(Node):
         var = self.resolve(var, ctx)
         if var is None:
             return None
-        if isinstance(var,(types.MethodType,types.FunctionType)):
+        if isinstance(var, (types.MethodType, types.FunctionType)):
             var = var()
         for attr in attrs:
             if not attr:
@@ -102,7 +102,7 @@ class VarNode(Node):
             attr = attr.strip()
             if hasattr(var, attr):
                 func = getattr(var, attr)
-                if isinstance(func,(types.MethodType,types.FunctionType)):
+                if isinstance(func, (types.MethodType, types.FunctionType)):
                     var = func()
                 else:
                     var = func
