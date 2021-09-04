@@ -5,9 +5,9 @@ Template Engine
 
 Contents
 
-.. contents::
-   :depth: 2
-   :local:
+.. .. contents::
+..    :depth: 2
+..    :local:
    
 
 This is the template that comes with :doc:`Glass <glass>`.
@@ -713,7 +713,7 @@ use the tag;
 See the  ``Environment`` API here :class:`Environment <glass.template.main.Environment>`.
 
 Using With :doc:`Glass <glass>`
-================================
+---------------------------------
 
 To use the ``Environment`` class with Glass, use :attr:`app.template_env <glass.app.GlassApp.template_env>`.
 
