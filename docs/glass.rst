@@ -42,9 +42,8 @@ You can clone it from github with git.
   $ git clone https://github.com/horlarwumhe/glass.git
 
   $ cd glass
-
-  $ python setup.py install
   $ pip install -r requirements.txt
+  $ python setup.py install
 
 
 Your first code;
@@ -182,7 +181,7 @@ The url rule can take optional converter.
 
 Custom Converter.
 
-You can write converter to match this (``/1,2,3,4,4``) and convert it to list of integers.
+You can write converter to match this (``/1-2-3-4-5``) and convert it to list of integers.
 
 
 ::
@@ -191,7 +190,7 @@ You can write converter to match this (``/1,2,3,4,4``) and convert it to list of
    #the converter function
 
    def int_list(values):
-       values = values.strip()
+       values = values.strip().split('-')
        return list(map(int,values))
 
    app = GlassApp()
@@ -200,7 +199,7 @@ You can write converter to match this (``/1,2,3,4,4``) and convert it to list of
    # second argument is regex for the converter
    # third argument is the callback function
 
-   app.url_converter('int_list',r'(\d+\-?)',int_list)
+   app.url_converter('int_list',r'(\d+\-?)+',int_list)
    #this will match integers seperated by - (1-2-78-3)
    #
    #http://domain.com/nums/1-23-34
@@ -213,7 +212,7 @@ You can write converter to match this (``/1,2,3,4,4``) and convert it to list of
         return "Hello"
 
 
-By default, each url function allow ``GET`` request method. Glass will return ``405 Method Not Allowed`` if any other request method is used. You need to provide other methods to the view.
+By default, each url function allows ``GET`` request method. Glass will return ``405 Method Not Allowed`` if any other request method is used. You need to provide other methods to the view.
 
 ::
 
@@ -447,6 +446,20 @@ If the any of the functions of ``.before_request`` returns response, the respons
   def unavailable():
       return "The site is under development"
 
+The functions will be called in order they are created.
+
+::
+
+   @app.before_request
+   def first():
+       # this will be called first
+       pass
+
+   @app.before_request
+   def second():
+     pass
+
+
 :meth:`after_request <glass.app.GlassApp.after_request>`
 
 Use this decorator to register a fuction(s) to call after each request.
@@ -496,7 +509,7 @@ The following will raise ``RuntimeError``.
     # raise RuntimeError
     db = current_app.config("DB_ENGINE")
 
-To use avoid the errors above, you can manually mount the app.
+If there is need to use these functions when not handling request, you can manually mount the app.
 
 ::
 
@@ -514,11 +527,11 @@ To use avoid the errors above, you can manually mount the app.
         init_db()
 
 
-You can pass ``environ`` argument to :func:`mount` to use :class:`request <glass.requests.request>`
+You can pass ``environ`` argument to :func:`mount` to use :class:`request <glass.requests.request>` object.
 
 ::
 
-   from glass import GlassApp, current_app,render_template
+   from glass import GlassApp, current_app,render_template,request
 
      app = GlassApp()
      environ = {} # wsgi environ
@@ -526,7 +539,7 @@ You can pass ``environ`` argument to :func:`mount` to use :class:`request <glass
          request.headers
          request.host
 
-current_app and request are only available from thread where they are initailize. If you create another thread, then you mount the app again.
+``current_app`` and ``request`` are only available from thread where they are initailized. If you create another thread, then you mount the app again.
 
 
 ::
@@ -540,12 +553,12 @@ current_app and request are only available from thread where they are initailize
      def login():
         login_user(user)
         Thread(target=send_login_mail,args=(request.environ,user)).start()
-        return "hello"
+        return "Hello"
 
 
     def send_login_mail(environ,user):
         # this is another thread, re-mount the app
-
+        now = str(datetime.utcnow())
         with app.mount(environ):
            body = render_template('login_email.html',user=user,now=now)
            send_mail(user.email,body)
@@ -585,6 +598,7 @@ You  can set  cookies and also get the cookies sent to the server. To set cookie
   - httponly (default to ``False``)
   - secure (default to ``False``)
   - domain (default to ``None``)
+  - samesite (default to ``None``)
 
 Read more at `mozilla <https://developer.mozilla.org/en/docs/web/HTTP/Cookies>`_ for more details about these values.
 
@@ -600,7 +614,7 @@ Get the cookies sent to the server;
        # do_something_with_cookie(cookie)
        return 'Hello'
 
-:attr:`~glass.requests.Request.cookies` returns ``dict`` .
+:attr:`request.cookies <glass.requests.Request.cookies>` returns ``dict`` .
 
 Remove cookie;
 
@@ -614,9 +628,12 @@ Remove cookie;
 
 :meth:`~glass.response.BaseResponse.delete_cookie` accepts keywords as ``set_cookie``
 
+
+.. _using-session:
+
 Session
 ---------
-The session object allows you to store information about a request. The data store in session are different for different requests.
+The session object allows you to store information about a request. The data store in session are different for different requests. Only JSON serializable object can be stored in the session.
 
 To use session, you need to set app secret_key.
 
@@ -656,6 +673,8 @@ To use session, you need to set app secret_key.
        return redirect('/')
 
 Session class is ``dict`` object, so all methods of ``dict`` are available.
+
+:class:`session <glass.sessions.Session> API docs.
 
 .. note::
     Like flask, session data are stored in the cookie sent to the browser, unlike django which save session data inside database.
@@ -698,10 +717,14 @@ You can write  your own session storage to manage session.
         # you need to set cookies attributes
         # expires, max-age,httponly,secure,samesite
         #
+        expires = current_app.config['SESSION_COOKIES_EXPIRE']
+        max_age = current_app.config['SESSION_COOKIE_MAXAGE']
         response.set_cookie(name,cookie,...)
 
       app = GlassApp()
       app.session_cls = MySessionManager()
+
+See :ref:`Session Configuration <session-config>` on how to configure session cookie.
 
 .. note::
     Session data are ``threading.local`` instance. This make the data  thread safe on multi-thread web server.
@@ -797,6 +820,107 @@ To upload files, dont forget to set ``enctype="multipart/form-data"`` in your ht
 
 Read more on :class:`~glass.requests.Request` for other methods.
 
+User Authentication
+---------------------
+
+You can use Glass :ref:`session <using-session>` object for user authentication. 
+
+Here is a simple example of how to authenticate user.
+::
+
+    from glass import request,session,redirect
+    from glass import GlassApp
+
+    from your_app.db import get_user, auth_user
+ 
+    app = GlassApp()
+
+    @app.route('/home')
+    def home():
+        if request.user is None:
+            username = 'Guest'
+        else:
+            username = request.user.username
+        return 'Hello  %s'%username
+
+    @app.route('/login',methods=['GET','POST'])
+    def login():
+        error = ''
+        if request.method == 'POST':
+            username = request.post.get('username')
+            password = request.post.get('password')
+            user = auth_user(username,password)
+            if user:
+                next_page = request.args.get('next','/')
+                login_user(user)
+                return redirect(next_page)
+            error = 'Invalid username or password'
+        return render_template('login.html',error=error)
+
+    @app.route('/logout')
+    def logout():
+        # logout user
+        if request.user is None:
+            return redirect('/')
+        logout_user(request.user)
+        return redirect('/')
+
+    def login_user(user):
+        # save user id in  the session
+        session['user_id'] = user.id
+
+    def logout_user():
+       session.pop('user_id')
+       # del session['user_id']
+
+    @app.before_request
+    def load_user():
+        # this function will be called before calling view function
+        # for the request url
+
+        #load user from session
+        request.user = None
+        user_id = session.get('user_id')
+        if user_id:
+            user = get_user(user_id)
+            if not user:
+               # user not found. delete user_id from session
+               session.pop('user_id')
+            else:
+                #
+                request.user = user
+
+Here is example of how to allow only authenticated user access a view function using decorator.
+
+::
+
+    def admin_only(view_func):
+        def inner(*args,**kwargs):
+            if request.user is None:
+                return redirect('/login')
+            if not request.user.is_admin:
+                flash("Admin only")
+                return redirect('/')
+            return view_func(*args,**kwargs)
+        return inner
+
+    def login_require(view_func):
+        def inner(*args,**kwargs):
+            if request.user is None:
+                return redirect('/login')
+            return view_func(*args,**kwargs)
+        return inner
+
+    @app.route('/admin')
+    @admin_only
+    def admin():
+        return "Welcome admin"
+
+    @app.route('/view')
+    @login_require
+    def view():
+       return "Hello"
+
 
 Configuration
 -----------------
@@ -826,20 +950,6 @@ Read more at :doc:`configuration <config>`
     # the configurations can be accesed as
     app.config['DEBUG']
     app.config['KEY']
-
-
-
-current app
-
-   The current app object can accessed from anywhere.
-
-::
-
-  from glass import current_app
-  # this only works with active http request
-  def connect_db():
-     db = current_app.config['DB_ENGINE']
-     do_something(db)
 
 
 Static Files
@@ -902,7 +1012,7 @@ You can Use
         if request.method == 'POST':
             name = request.post.get('name')
             email = request.post.get('email')
-        TemplateResponse('login.html',name=name,email=email)
+        return TemplateResponse('login.html',name=name,email=email)
 
 :func:`TemplateResponse`  takes same arguments as :ref:`Response <using-response>`
 
@@ -1100,7 +1210,7 @@ By default, Glass writes logs to process stdout. You can log app messages to ano
     @app.error(500)
     def error(e):
        logger.info('error occurs')
-       return render('500.html')
+       return render_template('500.html')
 
 check Python logging module `documentation <https://docs.python.org/3/library/logging.html>`_.
 
@@ -1156,7 +1266,7 @@ Full example
     from glass import flash
 
     app = GlassApp()
-    app.config['SECRET_KEY'] = 'some secrete'
+    app.config['SECRET_KEY'] = 'some secret'
 
     @app.route('/')
     def home():

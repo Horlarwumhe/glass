@@ -505,25 +505,101 @@ lets create a simple tag that shows current time.
          {{now}}
 
 
-.. note::
 
-     ``parser.get_next_token`` returns next token and remove
-     the token from token list
-     while ``.next_token``  next token without removing it. e.g. ``[token3,token2,token1 ]``
-     ``.next_token`` returns ``token1``
-     ``.get_next_token`` also returns ``token1``
-     but token list is now ``[token3,token2]``
-     ``.clean_tag`` is method of
-     class ``glass.temlate.parser.Token``
-     it returns the token command and argument
-     eg. ``{% if 1 > 7 %}``, then it returns
-     ``cmd, args = 'if', '1 > 7'``
-     if the token is not tag e.g. ``{{name}}``,
-     it returns empty string.
-     use ``.next_token`` to know the next token
-     and ``.get_next_token`` to remove the token from token list.
+Using the :func:`Parser` class.
 
-    
+:func:`parser.get_next_token` returns next token and remove
+the token from token list, while :func:`parser.next_token`  returns next token without removing it. 
+
+>>> from glass.template.main import Parser, Lexer
+>>> source = '''
+...    {% if user.name %}
+...     Hello {{user.name.title }}
+...  {% else %}
+...     Hello Guest
+...  {% endfor %}
+... '''
+>>> tokens = Lexer(source).tokenize()
+>>> parser = Parser(tokens)
+>>> parser.tokens
+...     [<Token BLOCK {% endfor %}, <Token TEXT Hello Guest,
+...      <Token BLOCK {% else %}, <Token VAR {{ user.name.title }},
+...       <Token TEXT Hello, <Token BLOCK {% if user.name %}
+...     ]
+>>> parser.next_token()
+<Token BLOCK {% if user.name %}
+>>> parser.tokens
+...     [<Token BLOCK {% endfor %}, <Token TEXT Hello Guest,
+...      <Token BLOCK {% else %}, <Token VAR {{ user.name.title }},
+...       <Token TEXT Hello, <Token BLOCK {% if user.name %}
+...     ]
+>>> parser.get_next_token()
+<Token BLOCK {% if user.name %}
+>>> parser.tokens
+...     [<Token BLOCK {% endfor %}, <Token TEXT Hello Guest,
+...      <Token BLOCK {% else %}, <Token VAR {{ user.name.title }},
+...       <Token TEXT Hello
+...     ]
+>>> parser.get_next_token()
+<Token TEXT Hello
+>>> parser.tokens
+...     [<Token BLOCK {% endfor %}, <Token TEXT Hello Guest,
+...      <Token BLOCK {% else %}, <Token VAR {{ user.name.title }}
+...       
+...     ]
+>>> parser.get_next_token()
+<Token VAR {{ user.name.title }}
+>>> parser.tokens
+...     [<Token BLOCK {% endfor %}, <Token TEXT Hello Guest,
+...      <Token BLOCK {% else %}
+...       
+...     ]
+>>> parser.next_token()
+<Token BLOCK {% else %}
+>>> parser.tokens
+...     [<Token BLOCK {% endfor %}, <Token TEXT Hello Guest,
+...      <Token BLOCK {% else %}
+...       
+...     ]
+>>> parser.get_next_token()
+<Token BLOCK {% else %}
+>>> parser.tokens
+[<Token BLOCK {% endfor %}, <Token TEXT Hello Guest]
+>>> parser.next_token()
+<Token TEXT Hello Guest
+>>> parser.tokens
+[<Token BLOCK {% endfor %}, <Token TEXT Hello Guest]
+>>> parser.get_next_token()
+<Token TEXT Hello Guest
+>>> parser.tokens
+[<Token BLOCK {% endfor %}]
+>>> parser.next_token()
+<Token BLOCK {% endfor %}
+>>> parser.tokens
+[<Token BLOCK {% endfor %}]
+>>> parser.get_next_token()
+<Token BLOCK {% endfor %}
+>>> parser.tokens
+[]
+>>>
+>>> source = '''
+... {% if name == 'admin' %}
+...     Hello
+... {% endif %}
+...
+... '''
+>>> parser = Parser(Lexer(source).tokenize())
+>>> token = parser.get_next_token()
+>>> token
+<Token BLOCK {% if name == 'admin' %}
+>>> cmd,args = token.clean_tag()
+>>> cmd
+'if'
+>>> args
+"name == 'admin'"
+>>> args.split()
+['name', '==', "'admin'"]
+>>>
 
 
 .. code:: python
