@@ -99,5 +99,4 @@ app.run()
 
 ``` 
 #### Documentation
-
-The full docs is available on [readthedocs](https://glassapp.readthedocs.io).
+Documentation is available on [glass site](http://glass.horlarwumhe.me). It is also available on [readthedocs](https://glassapp.readthedocs.io).

@@ -34,7 +34,7 @@ Config From Object
      TEMPLATES_FOLDER = '/path/to/template'
 
    app = GlassApp()
-   app.config.from_obj(Config)
+   app.config.from_object(Config)
 
 Config From Json
 ~~~~~~~~~~~~~~~~~
@@ -70,10 +70,10 @@ Using The Configuration Values;
 Internally used config values;
 
 
-*DEBUG*
-   enable debug mode.
+.. _session-config:
 
-   - default ``True``
+Session Configuration
+-------------------------
 
 *SESSION_COOKIE_NAME*
 
@@ -110,6 +110,20 @@ Internally used config values;
    cookie ``SameSite`` attribute.
 
         check `mozilla`_
+
+*SESSION_COOKIE_EXPIRE*
+   cookie ``Expires`` attribute.
+
+*SESSION_COOKIE_MAXAGE*
+   cookie ``Max-Age`` attribute.
+
+Other Configurations
+---------------------
+
+*DEBUG*
+   enable debug mode.
+
+   - default ``True``
 
 *SECRET_KEY*
 
