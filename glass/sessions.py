@@ -11,6 +11,32 @@ from glass.utils import _thread_local
 log = logging.getLogger('glass.app')
 
 
+def _get_session_cookie_config():
+    cookie_config = {}
+    domain = app.config['SESSION_COOKIE_DOMAIN']
+    if domain:
+        cookie_config['Domain'] = domain
+    cookie_config['Path'] = app.config['SESSION_COOKIE_PATH'] or '/'
+    expire = app.config['SESSION_COOKIE_EXPIRE']
+    if expire:
+        cookie_config['Expires'] = expire
+    max_age = app.config['SESSION_COOKIE_MAXAGE']
+    if max_age:
+        cookie_config['Max-Age'] = max_age
+    httponly = app.config['SESSION_COOKIE_HTTPONLY']
+    if httponly is True:
+        # only accept True or False
+        cookie_config['HttpOnly'] = True
+    secure = app.config['SESSION_COOKIE_SECURE']
+    if secure is True:
+        # only accept True or False
+        cookie_config['Secure'] = True
+    # name = app.config['SESSION_COOKIE_NAME']
+    same_site = app.config['SESSION_COOKIE_SAMESITE']
+    if same_site:
+        cookie_config['SameSite'] =  same_site
+    return cookie_config
+
 def encode_session(data, key=b'session-key'):
     """Encode current session data and sign it.
     This generate string to be used as cookie
@@ -160,29 +186,17 @@ class SessionManager:
     def save(self, response=None):
         # TODO: add Secure and SameSite
         key = app.config['SECRET_KEY']
+        cookie_config = _get_session_cookie_config()
         data = session.session_data
+        name = app.config['SESSION_COOKIE_NAME']
         if not data:
             if not session.modified:
                 return
-            name = app.config['SESSION_COOKIE_NAME']
             #TODO: add path,domain to delete_cookie
-            response.delete_cookie(name)
+            response.delete_cookie(name,**cookie_config)
             return
         cookie = encode_session(data, key)
-        kwargs = {}
-        domain = app.config['SESSION_COOKIE_DOMAIN']
-        if domain:
-            kwargs['Domain'] = domain
-        kwargs['Path'] = app.config['SESSION_COOKIE_PATH'] or '/'
-        expire = app.config['SESSION_COOKIE_EXPIRE']
-        if expire:
-            kwargs['Expire'] = expire
-        max_age = app.config['SESSION_COOKIE_MAXAGE']
-        if max_age:
-            kwargs['Max-Age'] = max_age
-        httponly = False  # TODO:
-        name = app.config['SESSION_COOKIE_NAME']
-        response.set_cookie(name, cookie, **kwargs)
+        response.set_cookie(name, cookie, **cookie_config)
 
 
 session = Session()
