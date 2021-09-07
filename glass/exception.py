@@ -78,5 +78,5 @@ class BadRequest(HTTPError):
 
 
 class RequestTooLarge(HTTPError):
-    code = 419
-    description = 'Request entity too large'
+    code = 413
+    description = 'Payload Too Large'

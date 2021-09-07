@@ -132,7 +132,7 @@ Other Configurations
 
 *MAX_CONTENT_LENGTH*
 
-  maximum ``Content-Length``. If request Content-Length is greater than this value ``419 Request Too large`` is returned.
+  maximum ``Content-Length``. If request Content-Length is greater than this value ``413 Payload Too large`` is returned.
 
      default to ``None``
 
