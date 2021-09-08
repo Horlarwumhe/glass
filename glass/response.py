@@ -74,8 +74,8 @@ class BaseResponse:
         :param name: cookie name
         :param value: cookie value
         :param kw: optional keywords argument
-            ``max-age``, ``samesite``, ``domain``
-            ``path``, ``expires``.
+            ``max_age``, ``samesite``, ``domain``
+            ``path``, ``expires``,``httponly``, ``secure``.
 
         Example::
 
@@ -93,6 +93,10 @@ class BaseResponse:
         """
         kw['Path'] = kw.pop('path', None) or kw.pop('Path', None) or '/'
         kw['HttpOnly'] = kw.pop('httponly', False) or kw.pop('HttpOnly', False)
+        if kw.get('expire'):
+            # accept both expire and expires
+            # for Expires cookie attribute
+            kw['Expires'] = kw.pop('expire', False)
         self.cookies.add_cookie(name, value, **kw)
 
     def delete_cookie(self, key, **kw):
@@ -169,6 +173,11 @@ class Response(BaseResponse):
             content = utils.encode(content, self.charset)
             self.headers['Content-Length'] = len(content)
         self.content = content
+        if self.status_code == 204:
+            # (rfc2616 section 10.2.3 and 10.3.5)
+            for header in ('Content-Type', 'Content-Length'):
+                self.headers.pop(header, None)
+            self.content = b''
 
 
 class JsonResponse(Response):
@@ -230,7 +239,8 @@ class FileResponse(Response):
         headers = kwargs.get('headers', {})
         if isinstance(headers, list):
             headers = dict(headers)
-        content_type = headers.get('Content-Type') or kwargs.get("content_type")
+        content_type = headers.get('Content-Type') or kwargs.get(
+            "content_type")
         if content_type:
             headers['Content-Type'] = content_type
         headers = self.add_headers(headers)
