@@ -167,7 +167,7 @@ class Response(BaseResponse):
         super().__init__(*args, **kwargs)
         if isinstance(content, (str, bytes)):
             content = utils.encode(content, self.charset)
-            self.headers['Content-Length'] = len(content)
+            self.headers['Content-Length'] = str(len(content))
         self.content = content
 
 
