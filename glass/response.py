@@ -171,7 +171,7 @@ class Response(BaseResponse):
         super().__init__(*args, **kwargs)
         if isinstance(content, (str, bytes)):
             content = utils.encode(content, self.charset)
-            self.headers['Content-Length'] = len(content)
+            self.headers['Content-Length'] = str(len(content))
         self.content = content
         if self.status_code == 204:
             # (rfc2616 section 10.2.3 and 10.3.5)

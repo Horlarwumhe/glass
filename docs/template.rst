@@ -605,7 +605,7 @@ the token from token list, while :func:`parser.next_token`  returns next token w
 .. code:: python
 
        # create function to parse the tag
-       def time_parse(parser):
+       def time_parser(parser):
         cmd,args = parser.get_next_token().clean_tag()
         # or 
         # token = parser.get_next_token()
@@ -631,7 +631,9 @@ the token from token list, while :func:`parser.next_token`  returns next token w
             context[self.var] = str(dt.datetime.now())
             return ''
 
->>> env = Environment(tags={'time':time})
+Register the tag function.
+
+>>> env = Environment(tags={'time':time_parser})
 >>> out = env.from_string('''
 ...  {% time as now %}
 ...  date is    {{now}}
