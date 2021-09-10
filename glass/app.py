@@ -42,6 +42,7 @@ class GlassApp:
         self.error_handlers = {}
         self.before_request_funcs = []
         self.after_request_funcs = []
+        self.url_rules = []
         static_url = self.config['STATIC_URL'] or 'static'
         static_url = static_url.strip('/')
         self.add_url_rule('/%s/<path:filename>' % static_url, self.send_static)
@@ -87,6 +88,7 @@ class GlassApp:
             req_method = list(map(str.upper, req_method))
             rule = Rule(url_rule, func, req_method, **kwargs)
             self.router.add(rule)
+            self.url_rules.append(rule)
             return func
 
         return decorator

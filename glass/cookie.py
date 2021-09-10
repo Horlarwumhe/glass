@@ -80,7 +80,6 @@ class Cookie:
             if isinstance(value, bool):
                 # httonly=True, change to
                 # HttpOnly;
-                #
                 if value:
                     out.append(key)
                 else:
