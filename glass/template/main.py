@@ -151,15 +151,17 @@ class Environment:
     :param loader: template loader class to load templates.
     :param filters: dict of custom filters.
     '''
-    def __init__(self, cache=None, tags=None, filters=None, **options):
+    def __init__(self, cache=None, tags=None, filters=None, loader=None, **options):
 
         self.cache = cache
-        self.options = options
-        self.loader = options.get('loader') or FileLoader()
+        # self.options = options
+        self.loader = loader or FileLoader()
         self.tags = tags or {}
         self.filters = filters or {}
         self.filters.update(DEFAULT_FILTERS)
         self.globals = {}
+        # options not used now. keep for future use.
+        self.options = options
 
     def from_string(
         self,
