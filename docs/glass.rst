@@ -474,6 +474,8 @@ Use this decorator to register a fuction(s) to call after each request.
 The function takes one argument, :class:`~glass.response.Response` object and returns the response object.
 
 
+.. _mount-app:
+
 Mounting The App
 ------------------
 
@@ -674,7 +676,7 @@ To use session, you need to set app secret_key.
 
 Session class is ``dict`` object, so all methods of ``dict`` are available.
 
-:class:`session <glass.sessions.Session> API docs.
+:class:`session <glass.sessions.Session>` API docs.
 
 .. note::
     Like flask, session data are stored in the cookie sent to the browser, unlike django which save session data inside database.

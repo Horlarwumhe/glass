@@ -217,6 +217,8 @@ class GlassApp:
         GlassServer().run_app(self, host, port, auto_reload)
 
     def mount(self, environ=None):
+        ''' see :ref:`doc <mount-app>`'''
+
         app_stack.push(self)
         if environ is not None:
             request.bind(environ)

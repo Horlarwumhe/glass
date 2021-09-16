@@ -43,6 +43,12 @@ class App:
     def __setattr__(self, x, y):
         self._get_current_app().__setattr__(x, y)
 
+    def __bool__(self):
+        try:
+            return bool(self._get_current_app())
+        except RuntimeError:
+            return False
+
     def _get_current_app(self):
         app = app_stack.top()
         if app is None:
