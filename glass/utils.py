@@ -43,12 +43,13 @@ def _thread_local():
         try:
             return ls.var
         except AttributeError:
-            if obj.__class__.__name__ in ('Request','Session'):
+            if obj.__class__.__name__ in ('Request', 'Session'):
                 raise RuntimeError(
                     "Request context not initialized. "
                     "This means you are trying to use function that "
                     "requires HTTP request")
-            raise 
+            raise RuntimeError("%s object not initialized" %
+                               obj.__class__.__name__)
 
     def fset(_, value):
         ls.var = value
