@@ -98,5 +98,6 @@ def login():
 app.run()
 
 ``` 
-#### Documentation
+## Documentation
 Documentation is available on [glass site](http://glass.horlarwumhe.me). It is also available on [readthedocs](https://glassapp.readthedocs.io).
+
