@@ -2,6 +2,7 @@ import operator
 import re
 
 from . import nodes as Node
+from .utils import smart_split
 
 TOKEN_REGEX = re.compile(
     r'''
@@ -15,7 +16,7 @@ VAR = re.compile(r'''
 ''', re.VERBOSE)
 
 STRING = re.compile(r'''
-(('.*')|".*")(\.\w+)*
+(('.*?')|".*?")(\.\w+)*
 ''', re.VERBOSE)
 
 FILTER = re.compile(r'''
@@ -69,6 +70,10 @@ class Token:
             raise TemplateSyntaxError('Empty tag node', self)
         return cmd, ''.join(rest)
 
+    def split_args(self):
+        _, args = self.clean_tag()
+        return smart_split(args)
+
 
 class Lexer:
     def __init__(self, template):
@@ -106,6 +111,7 @@ class Parser:
         self.tokens = list(reversed(tokens))
         self.tags = {}
         self.tags.update(default_tags)
+        self.state = []
 
     def next_token(self):
         try:
@@ -155,11 +161,21 @@ class Parser:
             tag_parser = self.tags[cmd]
         except KeyError:
             if re.search('end[a-z]+', cmd):
+                if self.state:
+                    expect_token = self.state.pop()
+                    cmd, _ = expect_token.clean_tag()
+                    msg = ('Unexpected token %s.'
+                           ' The innermost tag that needs to be closed is %s' %
+                           (token, expect_token))
+                    raise TemplateSyntaxError(msg, token)
                 raise TemplateSyntaxError("Unexpected token %s" % token, token)
             raise TemplateSyntaxError(
                 'Uknown tag %s. Did you forget to register this tag?' % token,
                 token)
-        return tag_parser(self)
+        self.state.append(token)
+        ret = tag_parser(self)
+        self.state.pop()
+        return ret
 
     def skip_token(self, n=1):
         for _ in range(n):
@@ -179,6 +195,8 @@ class Parser:
 
 def parse_variable(var):
     # TODO
+    #{{name|filter1 |filter2 }}
+    #{{name.attr.attr | filter1 | filter2}}
     var = var.strip().rstrip()
     match = VAR.match(var)
     funcs = []
@@ -252,7 +270,7 @@ def condition_parse(token):
     eg. if i, if not i, if i > 1:
     """
     _, args = token.clean_tag()
-    bits = args.split()
+    bits = smart_split(args)
     if len(bits) == 3:
         # a == b
         # x > y
@@ -298,7 +316,7 @@ def for_parse(parser):
     loopvars = args[:match.start()]
     iter_object = args[match.end():].strip()
     #TODO: docs
-    #split and join to remove umneccesary space
+    #split and join to remove unneccesary space
     loopvars = ''.join(loopvars.split()).rstrip(',')
     loopvars = loopvars.split(',')
     for var in loopvars:
@@ -313,7 +331,7 @@ def filter_parse(parser):
     token = parser.get_next_token()
     _, args = token.clean_tag()
     body = parser.parse(stop_at=('end', ))
-    args = ''.join(args.split()).rstrip(',')
+    args = ''.join(smart_split(args)).rstrip(',')
     args = args.split(',')
     for _ in args:
         if not _.isidentifier():
@@ -327,7 +345,7 @@ def filter_parse(parser):
 def parse_extend(parser):
     token = parser.get_next_token()
     _, args = token.clean_tag()
-    args = args.split()
+    args = smart_split(args)
     if len(args) > 1 or not args:
         raise TemplateSyntaxError('extends requires one arg', token)
     template = parse_variable(args[0])
@@ -339,7 +357,7 @@ def parse_extend(parser):
 def parse_block(parser):
     token = parser.get_next_token()
     _, args = token.clean_tag()
-    args = args.split()
+    args = smart_split(args)
     block_super = False
     super_end = False
     if len(args) == 2:
@@ -365,8 +383,9 @@ def parse_block(parser):
 def parse_include(parser):
     token = parser.get_next_token()
     _, args = token.clean_tag()
-    args = args.split()
+    args = smart_split(args)
     if not args:
-        raise TemplateSyntaxError('include tag requires atleast one arg', token)
+        raise TemplateSyntaxError('include tag requires atleast one arg',
+                                  token)
     name = parse_variable(args[0])
     return Node.IncludeNode(name)
