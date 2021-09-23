@@ -96,9 +96,8 @@ class VarNode(Node):
         if var is None:
             return None
         if isinstance(
-                var,
-                (types.MethodType, types.FunctionType,
-                 types.BuiltinFunctionType)):
+                var, (types.MethodType, types.FunctionType,
+                      types.BuiltinFunctionType)):
             var = var()
         for attr in attrs:
             if not attr:
