@@ -82,19 +82,23 @@ class VarNode(Node):
         '''
         if not self.var:
             return None
-        var = self.var.replace('"', '\'')
-        if var.startswith("'"):
-            i = var.index("'", 1)
-            string = var[:i + 1]
-            attrs = var[i + 1:]
+        # var = self.var
+        if self.var[0] in ("'", '"'):
+            quote = self.var[0]
+            i = self.var.index(quote, 1)
+            string = self.var[:i + 1]
+            attrs = self.var[i + 1:]
             attrs = attrs.split('.')
             var = string
         else:
-            var, *attrs = var.split('.')
+            var, *attrs = self.var.split('.')
         var = self.resolve(var, ctx)
         if var is None:
             return None
-        if isinstance(var, (types.MethodType, types.FunctionType)):
+        if isinstance(
+                var,
+                (types.MethodType, types.FunctionType,
+                 types.BuiltinFunctionType)):
             var = var()
         for attr in attrs:
             if not attr:
@@ -102,7 +106,8 @@ class VarNode(Node):
             attr = attr.strip()
             if hasattr(var, attr):
                 func = getattr(var, attr)
-                if isinstance(func, (types.MethodType, types.FunctionType)):
+                if isinstance(func, (types.MethodType, types.FunctionType,
+                                     types.BuiltinFunctionType)):
                     var = func()
                 else:
                     var = func
@@ -110,7 +115,13 @@ class VarNode(Node):
                 try:
                     var = var[attr]
                 except (KeyError, TypeError):
-                    return
+                    # try list
+                    # list.0
+                    try:
+                        var = var[int(attr)]
+                    except (LookupError, ValueError, TypeError):
+                        return
+
             else:
                 return
         if env:
