@@ -1,4 +1,3 @@
-
 from .utils import _thread_local
 import threading
 import glass.sessions as _session
@@ -70,12 +69,11 @@ def messages():
     msgs = _session.session.get('__flash__', [])
     for msg in msgs:
         yield msg
+    _session.session.pop('__flash__')
     msgs.clear()
 
 
 get_session_messages = flash_messages = messages
-
-
 
 app_stack = AppStack()
 
