@@ -3,10 +3,10 @@ import hashlib
 import logging
 import pickle
 
+
 from glass._helpers import current_app as app
 from glass.requests import request
 from glass.utils import _thread_local
-
 
 log = logging.getLogger('glass.app')
 
@@ -34,8 +34,9 @@ def _get_session_cookie_config():
     # name = app.config['SESSION_COOKIE_NAME']
     same_site = app.config['SESSION_COOKIE_SAMESITE']
     if same_site:
-        cookie_config['SameSite'] =  same_site
+        cookie_config['SameSite'] = same_site
     return cookie_config
+
 
 def encode_session(data, key=b'session-key'):
     """Encode current session data and sign it.
@@ -193,7 +194,7 @@ class SessionManager:
             if not session.modified:
                 return
             #TODO: add path,domain to delete_cookie
-            response.delete_cookie(name,**cookie_config)
+            response.delete_cookie(name, **cookie_config)
             return
         cookie = encode_session(data, key)
         response.set_cookie(name, cookie, **cookie_config)

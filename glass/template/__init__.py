@@ -1,8 +1,7 @@
 import logging
-
 from .main import Environment, FileLoader, Template, TemplateLoader
-
 from .nodes import Node
+
 
 logger = logging.getLogger('glass.template')
 stream = logging.StreamHandler()

@@ -43,7 +43,7 @@ class Request:
     @cached_property()
     def path(self):
         """HTTP request path"""
-        return self.environ.get("PATH_INFO",'')
+        return self.environ.get("PATH_INFO", '')
 
     @cached_property()
     def cookies(self):
@@ -144,10 +144,9 @@ class Request:
         #FIXME: HTTP_REQUEST_METHOD or REQUEST_METHOD
         return self.environ.get("REQUEST_METHOD", '').upper()
 
-
     @property
     def user_agent(self):
-        return self.environ.get('HTTP_USER_AGENT','')
+        return self.environ.get('HTTP_USER_AGENT', '')
 
     @property
     def stream(self):
