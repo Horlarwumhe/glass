@@ -1,6 +1,7 @@
 from glass.template import Environment, FileLoader
 from glass._helpers import current_app as app
 from glass._helpers import flash_messages
+from .templatetags import url_for_parser
 
 try:
     import jinja2
@@ -65,11 +66,14 @@ def _render_stl_template(template, context, **kwargs):
 class AppTemplateEnviron(Environment):
     def __init__(self, app, *args, **kwargs):
         self.app = app
+        tags = kwargs.pop('tags',{})
+        tags.update(dict(url_for =url_for_parser))
+        kwargs['tags'] = tags
         super().__init__(*args, **kwargs)
         self.add_globals()
 
     def add_globals(self):
-        """Get global values to inject in to the template
+        """Get global values to inject in to the templates
         """
         from glass.requests import request
         from glass.sessions import session
