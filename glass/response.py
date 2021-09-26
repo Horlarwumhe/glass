@@ -5,6 +5,7 @@ import os
 import re
 from datetime import datetime
 from email.utils import parsedate_tz
+from urllib.parse import unquote as urlunquote
 
 from glass import http, utils
 from glass.cookie import HTTPCookie
@@ -51,7 +52,7 @@ class BaseResponse:
             if isinstance(headers, dict):
                 headers = headers.items()
             for name, value in headers:
-                self.set_header(name, value)
+                self.set_header(name, str(value))
 
         content_type = self.headers.get("Content-Type")
         if content_type:
@@ -296,6 +297,7 @@ def send_static(filename, app, request):
     """Send static file (css,jss,images,...)
 
     """
+    filename = urlunquote(filename)
     if filename.startswith('../')\
        or os.path.isabs(filename)\
        or filename == '..':

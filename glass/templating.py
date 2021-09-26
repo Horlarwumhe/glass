@@ -66,8 +66,8 @@ def _render_stl_template(template, context, **kwargs):
 class AppTemplateEnviron(Environment):
     def __init__(self, app, *args, **kwargs):
         self.app = app
-        tags = kwargs.pop('tags',{})
-        tags.update(dict(url_for =url_for_parser))
+        tags = kwargs.pop('tags', {})
+        tags.update(dict(url_for=url_for_parser))
         kwargs['tags'] = tags
         super().__init__(*args, **kwargs)
         self.add_globals()
