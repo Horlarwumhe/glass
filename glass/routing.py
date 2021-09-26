@@ -1,20 +1,31 @@
 import re
-
+from urllib.parse import (
+    urlparse, urlunparse, urlencode,quote as urlquote)
+import types
 from glass.exception import HTTP404, MethodNotAllow
+from glass.requests import request
+from ._helpers import current_app as app
 
 RULE_REGEX = re.compile(r'<(?:(?P<converter>[^>:]+):)?(?P<parameter>\w+)>')
 
-CONVERTERS_REGEX = {
-    'int': r'\d+',
-    'path': r'.+',
-    'str': r'[^/]+'
-}
+CONVERTERS_REGEX = {'int': r'\d+', 'path': r'.+', 'str': r'[^/]+'}
 
-CONVERTERS = {
-    'int': int,
-    'str': str,
-    'path': str
-}
+CONVERTERS = {'int': int, 'str': str, 'path': str}
+
+
+class ParamConverter:
+    def __init__(self, name, converter):
+        self.param_name = name
+        regex = CONVERTERS_REGEX[converter]
+        self.regex = re.compile(regex)
+        self.func = CONVERTERS[converter]
+        self.converter_name = converter
+
+    def __call__(self, *args):
+        return self.func(*args)
+
+    def __repr__(self):
+        return '<Param %s --> %s' % (self.param_name, self.func)
 
 
 class Rule:
@@ -23,21 +34,47 @@ class Rule:
         self.callback = callback
         self.methods = methods or []
         self.converter = {}
+        self.params = {}
+        self.regex = ''
 
     def __repr__(self):
         return '<Rule %s --> %s, {%s}' % (self.url_rule, self.callback,
-                                          ''.join(self.methods))
+                                          ', '.join(self.methods))
 
     def get_callback(self, request_method=''):
         if not self.methods or not request_method:
             return self.callback
-        if not request_method in self.methods:
+        if request_method not in self.methods:
             raise MethodNotAllow()
         return self.callback
 
+    def __call__(self, *kwargs):
+        return self.callback(**kwargs)
+
+    def build(self, **kwargs):
+        if not self.regex:
+            raise TypeError
+        out = self.url_rule
+        missing_args = set(self.params) - set(kwargs)
+        if missing_args:
+            raise TypeError("Rule (%s) missing required parameters %s " %
+                            (self.url_rule, missing_args))
+        for _, param_converter in self.params.items():
+            try:
+                value = str(kwargs.pop(param_converter.param_name))
+            except KeyError:
+                raise
+            # if not param_converter.regex.match(value):
+            #    pass
+            sub = '<(%s:)?%s>' % (param_converter.converter_name,
+                                  param_converter.param_name)
+            pattern = re.compile(sub)
+            out = pattern.sub(value, out)
+        return out
+
 
 class Router:
-    def __init__(self,app=None):
+    def __init__(self, app=None):
         self.rules = []
         self._url_caches = {}
 
@@ -71,7 +108,8 @@ class Router:
             except KeyError:
                 raise TypeError("unknown converter %s for the rule '%s'" %
                                 (converter, original_route))
-            converters[parameter] = CONVERTERS.get(converter, str)
+            param_converter = ParamConverter(parameter, converter)
+            converters[parameter] = param_converter
             parts.append('(?P<' + parameter + '>' + regex + ')')
         if original_route.endswith('/'):
             parts.append('?')
@@ -80,9 +118,11 @@ class Router:
 
     def add(self, rule):
         '''add new url rule'''
-        regex, converter = self.compile(rule.url_rule)
-        rule.converter = converter
+        regex, params = self.compile(rule.url_rule)
+        rule.converter = dict((k, v.func) for k, v in params.items())
         regex = re.compile(regex)
+        rule.regex = regex
+        rule.params = params
         self.rules.append((rule, regex))
 
     def match(self, environ):
@@ -124,10 +164,82 @@ class Router:
             applied[param] = func(value)
         return applied
 
-    def add_converter(self,name,regex,func):
+    def add_converter(self, name, regex, func):
         try:
             re.compile(regex)
         except re.error:
-            raise ValueError('bad re syntax %s'%regex)
+            raise ValueError('bad re syntax %s' % regex)
         CONVERTERS_REGEX[name] = regex
         CONVERTERS[name] = func
+
+
+def url_for(view_name, **kwargs):
+    '''Build url for a view
+    ::
+
+      @app.route('/u/login')
+      def login():
+        return "Hello"
+      # url_for('login')
+
+    :param view_name: name of the url view
+
+    Required arguments.
+       arguments for the target  url.
+       ``/u/<id>/<username>/``
+       url_for('view',id=58,username='user')
+
+    Optional arguments.
+    Note, optional arguments start with ``_``
+
+    :param _scheme: url scheme (``http``, ``https`` or other)
+
+                    if not given, scheme is determined in this order.
+
+                    1 . from app configuration, app.config['SERVER_NAME'] = ``'http://domain.com'``
+
+                    2. default to 'http'.
+
+    :param _fragment: value after ``#`` in url ``http://domai.com/a/a#target``.
+                      default to '',no fragment.
+
+    :param _target: same as ``_fragment``
+
+    Other arguments provided will be used as query string for the url.
+    ::
+       path = url_for('login',q="1",x="2",y="3")``
+       # /u/login?q=1&x=2&y=3
+
+    .. versionadded:: 0.0.3
+
+    '''
+
+    if isinstance(view_name, types.FunctionType):
+        view_name = view_name.__name__
+    rule = app.view_func.get(view_name)
+    if not rule:
+        raise LookupError('Endpoint with view name "%s" not found' % view_name)
+    path = rule.build(**kwargs)
+    for param in rule.params:
+        kwargs.pop(param, None)
+    server_name = app.config['SERVER_NAME']
+    if server_name is None:
+        server_name = ''
+    fragment = kwargs.pop('_fragment', '')
+    if not fragment:
+        fragment = kwargs.pop('_target', '')
+    scheme = kwargs.pop('_scheme', '')
+    uri = urlparse(server_name)
+    netloc = uri.netloc
+    scheme = scheme or uri.scheme or 'http'
+    if not netloc and uri.path:
+        if not uri.path.startswith('/'):
+            # /www.domain.com is consider as path
+            netloc = uri.path[:-1] if uri.path.endswith('/') else uri.path
+        # urlparse('www.domain.com')
+        # urllib parse this as path and not netloc
+    if not netloc and scheme:
+        scheme = ''
+    query_string = urlencode(kwargs)
+    url = urlunparse((scheme, netloc, urlquote(path), '', query_string, fragment))
+    return url

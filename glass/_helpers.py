@@ -66,7 +66,9 @@ def flash(message, category=None):
 
 
 def messages():
-    msgs = _session.session.get('__flash__', [])
+    msgs = _session.session.get('__flash__', None)
+    if msgs is None:
+        return 
     for msg in msgs:
         yield msg
     _session.session.pop('__flash__')

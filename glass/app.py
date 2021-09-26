@@ -43,9 +43,10 @@ class GlassApp:
         self.before_request_funcs = []
         self.after_request_funcs = []
         self.url_rules = []
+        self.view_func = {}
         static_url = self.config['STATIC_URL'] or 'static'
         static_url = static_url.strip('/')
-        self.add_url_rule('/%s/<path:filename>' % static_url, self.send_static)
+        self.add_url_rule('/%s/<path:filename>' % static_url, self.send_static, view_name='static')
 
     @cached_property()
     def template_env(self):
@@ -71,7 +72,7 @@ class GlassApp:
     def template_cache(self):
         return Cache()
 
-    def route(self, url_rule, methods='GET', **kwargs):
+    def route(self, url_rule, methods='GET', view_name=None, **kwargs):
         """Register a view function for URL as decorator
         ::
 
@@ -80,21 +81,27 @@ class GlassApp:
               return 'Hello'
         """
         def decorator(func):
-            req_method = methods
-            if not req_method:
-                req_method = ["GET"]
-            if isinstance(req_method, str):
-                req_method = [req_method]
-            req_method = list(map(str.upper, req_method))
-            rule = Rule(url_rule, func, req_method, **kwargs)
-            self.router.add(rule)
-            self.url_rules.append(rule)
+            self._add_rule(url_rule, func, methods, view_name, **kwargs)
             return func
 
         return decorator
 
-    def add_url_rule(self, rule, func, methods=None):
-        return self.route(rule, methods)(func)
+    def _add_rule(self, url_rule, func, methods, view_name=None, **kwargs):
+
+        if not methods:
+            methods = ["GET"]
+        if isinstance(methods, str):
+            methods = [methods]
+        methods = list(map(str.upper, methods))
+        rule = Rule(url_rule, func, methods, **kwargs)
+        self.router.add(rule)
+        self.url_rules.append(rule)
+        if not view_name:
+            view_name = func.__name__
+        self.view_func[view_name] = rule
+
+    def add_url_rule(self, rule, func, methods=None, view_name=None):
+        return self.route(rule, methods, view_name)(func)
 
     def get(self, url_rule, **kwargs):
         return self.route(url_rule, 'GET', **kwargs)
@@ -191,8 +198,8 @@ class GlassApp:
 
         return decorator
 
-    def url_converter(self,name,regex,func):
-        self.router.add_converter(name,regex,func)
+    def url_converter(self, name, regex, func):
+        self.router.add_converter(name, regex, func)
 
     def run(self, host='127.0.0.1', port=8000, debug=None, auto_reload=False):
         """Run the application development server.
