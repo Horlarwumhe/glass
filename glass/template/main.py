@@ -38,7 +38,7 @@ class Template:
         """Render template"""
         if self._compiled_nodes is None:
             self.compile()
-        context.update(self.context)
+        self.context.update(context)
         return self._compiled_nodes.render(context, self.env)
 
     def add_tags(self, tags):
