@@ -152,3 +152,11 @@ Other Configurations
     app.config['TEMPLATES_FOLDER'] = '/path/to/template'
 
     app.config['TEMPLATES_FOLDER'] = ('/path/to/template','/path/to/other/template')
+
+
+*SERVER_NAME*
+
+::
+
+    app.config['SERVER_NAME'] = 'https://domain.com'
+

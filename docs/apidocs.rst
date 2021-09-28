@@ -30,5 +30,9 @@ glass.template
     .. automodule:: glass.template.main
       :members:
 
+url_for
+==========
+    .. autofunction::  glass.routing.url_for
+
 
 

@@ -60,7 +60,7 @@ Such as;
 
 Filters
 --------
-Filters are python function that modify value(s) of variables in the template. Values after ``|`` are filters. They takes the variable as argument.
+Filters are python function that modify value(s) of variables in the template. Values after ``|`` are filters. They take the variable as argument.
 
 see :ref:`create custom filter <custom-filter>` to create new template filter.
 
@@ -89,7 +89,15 @@ using block filter tag;
    {% end %}
  but not this, it is outside the filter node
 
+Using Python ``dict`` or ``list`` in the template.
 
+::
+   
+   {{ dict.key }} # dict[key]
+
+   {{list.0}} list[0]
+
+   {{ list.2.upper }} # list[2].upper()
 
 
 >>> from glass.template  import Environment
@@ -138,7 +146,9 @@ OSError: Template not found C:\Users\ADMIN\Desktop\projects\glass\templates\inde
    >>> env = Environment(loader=FileLoader('/path/to/templates'))
    >>> # or 
    >>> env = Environment(loader=FileLoader(['/path/to/templates','/path/to/other/template']))
-   >>> 
+   >>> template = env.get_template('index.html')
+   >>> template.render({})
+
 
 
 You can  create custom template loader.
@@ -583,7 +593,7 @@ the token from token list, while :func:`parser.next_token`  returns next token w
 []
 >>>
 >>> source = '''
-... {% if name == 'admin' %}
+... {% if name == 'Firstname Lastname' %}
 ...     Hello
 ... {% endif %}
 ...
@@ -591,16 +601,19 @@ the token from token list, while :func:`parser.next_token`  returns next token w
 >>> parser = Parser(Lexer(source).tokenize())
 >>> token = parser.get_next_token()
 >>> token
-<Token BLOCK {% if name == 'admin' %}
+<Token BLOCK {% if name == 'Firstname Lastname' %}
 >>> cmd,args = token.clean_tag()
 >>> cmd
 'if'
 >>> args
-"name == 'admin'"
+"name == 'Firstname Lastname'"
 >>> args.split()
-['name', '==', "'admin'"]
+['name', '==', "'Firstname", "Lastname'"]
+>>> token.split_args()
+['name', '==', "'Firstname Lastname'"]
+>>> # use token.split_args() to split content
+...
 >>>
-
 
 .. code:: python
 

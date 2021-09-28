@@ -35,6 +35,14 @@ First, install from pypi:
 
    $ pip install glass-web
 
+Upgrade to latest version.
+
+::
+
+    $ pip install --upgrade glass-web
+
+
+
 You can clone it from github with git.
 
 ::
@@ -79,7 +87,8 @@ With `gunicorn <https://gunicorn.org>`_ ;
 
 .. note::
 
-   To use builtin server, add ``app.run`` to your code.
+   To use the builtin server, add ``app.run`` to your code.
+   Use the builtin server only for development. Dont use in production.
 
 ::
 
@@ -159,15 +168,18 @@ The url rule can take optional converter.
      
      @app.route('/read/<int:post_id>')
      def read(post_id):
+         # /read/1
          assert isinstance(post_id,int)
          return 'Hello'
 
      @app.route('/view/<str:username>')
      def view(username):
+        # /view/name
         return username
 
      @app.route('/view/<path:file>')
      def read_file(file):
+        # /view/a/b/c/d
         return FileResponse(file)
 
     # /read/<int:post_id> will match /read/82
@@ -181,7 +193,7 @@ The url rule can take optional converter.
 
 Custom Converter.
 
-You can write converter to match this (``/1-2-3-4-5``) and convert it to list of integers.
+You can write a converter to match this (``/1-2-3-4-5``) and convert it to list of integers.
 
 
 ::
@@ -238,6 +250,168 @@ By default, each url function allows ``GET`` request method. Glass will return `
           # GET 
           do_get()
        return "Hello"
+
+URL Building
+
+
+To build url for a specific function, use the :func:`url_for <glass.routing.url_for>`. Using url_for makes it easy to change url for your view without the needs to look for where the url is used.
+
+::
+
+  from glass import GlassApp
+  from glass import url_for
+  from glass import request,redirect
+
+  app = GlassApp()
+  @app.route('/index')
+  def home():
+      if not request.user:
+          return reirect(url_for('login'))
+      return "Hello"
+
+  @app.route('/user/login')
+  def login():
+    if request.user:
+        return redirect(url_for('home'))
+    return render_template('login.html')
+
+
+Building URLs with parameters.
+
+::
+
+    @app.route('/<username>/<code>')
+    def reset_password(username,code):
+        return "hello"
+
+To build URL for this view, provide the URL parameters to the :func:`url_for`.
+
+::
+
+    with app.mount():
+        path = url_for('reset_password',username="siteuser",code="user-reset-code")
+        print(path)
+        # /siteuser/user-reset-code
+
+You can also build url with query string by providing the query string keys and values.
+
+::
+
+    @app.route('/u/<username>')
+    def get_user_post(username):
+       # /u/username?sort=true&max=10
+       sort = request.query.get('sort')
+       max = request.query.get('max')
+
+::
+
+    with app.mount():
+        path = url_for('get_user_post',username='username',max='10',sort='true')
+        print(path)
+    #  /u/username?max=10&sort=true
+
+Building URL with fragment or target.
+
+::
+
+     http://domain.com/a/b#target
+
+::
+
+    with app.mount():
+        path = url_for('login',_fragment="Loginform")
+        print(path)
+        # /user/login#Loginform
+
+If ``SERVER_NAME`` is available in the app configuration, url_for will return the full url.
+
+::
+
+    app.config['SERVER_NAME'] = 'https://mysite.com'
+    with app.mount():
+        path = url_for('login')
+        print(path)
+        #  'https://mysite.com/user/login
+
+    with app.mount():
+        path = url_for('get_user_post',username='username',max='10',sort='true')
+        print(path)
+        #  'https://mysite.com/u/username?max=10&sort=true'
+
+    with app.mount():
+        path = url_for('get_user_post',username='user name')
+        print(path)
+        # https://mysite.com/u/user%20name
+
+Instead of using the function as the name of the view, you can pass ``view_name`` to :func:`app.route`.
+
+::
+
+    @app.route('/u/<user>',view_name='profile')
+    def get_user_details(user):
+        return "hello"
+
+    with app.mount():
+        path = url_for('profile',user="username")
+        print(path)
+    #   /u/username
+
+This is useful when using one view for different urls.
+
+::
+
+   @app.route('/u/<user>/<code>',view_name="view1")
+   @app.route('/u/<user>',view_name='view2')
+   def view(user,code=None):
+       if code is None:
+           return user
+           # /u/<user>
+       else:
+          # /u/<user>/<code>
+          return user+code
+    # url_for('view1',user='username',code='code')
+    # url_for('view2',user='username')
+
+
+
+The function :func:`url_for` is also available in the Glass template.
+
+
+::
+
+  @app.route('/')
+  def home():
+     return render_template('home.html')
+
+
+  @app.route('/u/<username>/<code>')
+  def reset_password(username,code):
+      return "hello"
+
+  @app.route('/posts/<username>')
+  def get_user_post(username):
+      return "Hello"
+::
+
+    # home.html
+
+    <a href='{% url_for "login" %}'>Login </a>
+
+    <a href='{% url_for "reset_password" username=user.name code=user.code %}'>Reset </a>
+
+    <a href='{% url_for "get_user_post" username="username" max="10" sort="true" %}'>My Posts </a>
+
+Note: there should be no space between the keywords and value;
+
+::
+
+    {% url_for "view" key1=value1 key2=value3 %}
+
+
+This will raise an exception;
+::
+
+   {% url_for "view" key1= value1 key2=value3 %}
 
 
 Response
@@ -329,6 +503,7 @@ To redirect users to another url, use :func:`~glass.response.redirect`.
 
 ::
 
+   from glass import url_for
    from glass import redirect
    from glass import session
 
@@ -336,7 +511,7 @@ To redirect users to another url, use :func:`~glass.response.redirect`.
    def home():
       name = session.get('name')
       if not name:
-          return redirect('/login')
+          return redirect(url_for('login'))
       return "Hello %s"%name
 
    @app.route('/login',methods=['GET',"POST"])
@@ -357,6 +532,7 @@ Sending Files
     @app.route('/file/<path:filename>')
     def send_file(filename):
         return FileResponse(filename)
+
 
 Handling Errors
 ------------------
@@ -479,7 +655,7 @@ The function takes one argument, :class:`~glass.response.Response` object and re
 Mounting The App
 ------------------
 
-When handling request,Glass pushes the application to its internal stack (``list``) and bind :class:`request <glass.requests.request>` to the ``environ`` from the ``wsgi`` web server. Then, you can access current app and request from any where in the app, as long as there is active request. Likewise, some functions in Glass requires active http request to work. Functions like :func:`render_template`
+When handling request,Glass pushes the application to its internal stack (``list``) and bind :class:`request <glass.requests.request>` to the ``environ`` from the ``wsgi`` web server. Then, you can access current app and request from any where in the app, as long as there is active request. Likewise, some functions in Glass require active http request to work. Functions like :func:`render_template`
 
 ::
 
@@ -522,6 +698,7 @@ If there is need to use these functions when not handling request, you can manua
      with app.mount():
          render_template('index.html')
          current_app.config is app.config
+         print(url_for('home'))
 
 
 
@@ -644,6 +821,7 @@ To use session, you need to set app secret_key.
     from glass import session,request
     from glass import GlassApp
     from glass import  redirect
+    from glass import url_for
     app = GlassApp()
     #
     app.config['SECRET_KEY'] = 'some secret'
@@ -666,7 +844,7 @@ To use session, you need to set app secret_key.
          name = request.post.get('username')
          if name:
             session['name'] = name
-            return redirect('/')
+            return redirect(url_for('home'))
        return form
 
     @app.route('/del')
@@ -828,6 +1006,7 @@ User Authentication
 You can use Glass :ref:`session <using-session>` object for user authentication. 
 
 Here is a simple example of how to authenticate user.
+
 ::
 
     from glass import request,session,redirect
@@ -835,9 +1014,9 @@ Here is a simple example of how to authenticate user.
 
     from your_app.db import get_user, auth_user
  
+    @app.route('/home')
     app = GlassApp()
 
-    @app.route('/home')
     def home():
         if request.user is None:
             username = 'Guest'
@@ -896,7 +1075,10 @@ Here is example of how to allow only authenticated user access a view function u
 
 ::
 
+    from functools import wraps
+
     def admin_only(view_func):
+        @wraps(view_func)
         def inner(*args,**kwargs):
             if request.user is None:
                 return redirect('/login')
@@ -907,6 +1089,7 @@ Here is example of how to allow only authenticated user access a view function u
         return inner
 
     def login_require(view_func):
+        @wraps(view_func)
         def inner(*args,**kwargs):
             if request.user is None:
                 return redirect('/login')
@@ -966,6 +1149,8 @@ Glass will look for ``static`` folder in the current working to serve static fil
 
 Like flask and django, default url for static files is ``/static/``.
 
+.. note::
+   For performance purpose,do not use the app to serve static files.
 
 .. _using-template:
 
@@ -1002,7 +1187,8 @@ The template syntax is very similar to django template.
         res = render('login.html',name=name,email=email)
         return Response(res)
 
-You can Use
+You can also *TemplateResponse*.
+
 ::
 
     from glass.response import TemplateResponse
@@ -1040,6 +1226,16 @@ You can Use
         <button>submit</button>
     </form>
     <body>
+
+Using Python ``dict`` or ``list``.
+
+::
+
+   {{ dict.key }} # dict[key]
+
+   {{list.0}} list[0]
+
+   {{ list.2.upper }} # list[2].upper()
 
 
 
