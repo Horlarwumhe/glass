@@ -1,6 +1,10 @@
 CHANGELOG
 =============
 
+v0.0.4
+---------
+
+There is no changes to this release. This release is same as v0.0.3. Released to fix a missing module on pypi release.
 
 v0.0.3
 ----------
