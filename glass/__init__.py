@@ -9,5 +9,5 @@ from .templating import render_template, render_string
 from. routing import url_for
 
 
-__version__ = '0.0.3'
+__version__ = '0.0.4'
 
