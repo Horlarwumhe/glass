@@ -391,6 +391,8 @@ The function :func:`url_for` is also available in the Glass template.
   @app.route('/posts/<username>')
   def get_user_post(username):
       return "Hello"
+
+
 ::
 
     # home.html

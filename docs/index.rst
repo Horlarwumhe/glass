@@ -24,7 +24,7 @@ What does it look like ?
    :maxdepth: 2
 
 
-Changelogs
+Changelog
 
 .. toctree::
    changelog
