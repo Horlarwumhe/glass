@@ -1,6 +1,11 @@
 CHANGELOG
 =============
 
+v0.0.5
+-------
+This release includes critical bug fixes.
+
+
 v0.0.4
 ---------
 
