@@ -39,7 +39,7 @@ class Template:
         if self._compiled_nodes is None:
             self.compile()
         self.context.update(context)
-        return self._compiled_nodes.render(context, self.env)
+        return self._compiled_nodes.render(self.context, self.env)
 
     def add_tags(self, tags):
         self.tags.update(tags)
