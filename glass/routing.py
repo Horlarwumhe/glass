@@ -1,9 +1,9 @@
 import re
 from urllib.parse import (
-    urlparse, urlunparse, urlencode,quote as urlquote)
+    urlparse, urlunparse, urlencode, quote as urlquote)
 import types
 from glass.exception import HTTP404, MethodNotAllow
-from glass.requests import request
+# from glass.requests import request
 from ._helpers import current_app as app
 
 RULE_REGEX = re.compile(r'<(?:(?P<converter>[^>:]+):)?(?P<parameter>\w+)>')
@@ -48,7 +48,7 @@ class Rule:
             raise MethodNotAllow()
         return self.callback
 
-    def __call__(self, *kwargs):
+    def __call__(self, **kwargs):
         return self.callback(**kwargs)
 
     def build(self, **kwargs):
@@ -63,6 +63,7 @@ class Rule:
             try:
                 value = str(kwargs.pop(param_converter.param_name))
             except KeyError:
+                # unlikely to occur. line 58 above.
                 raise
             # if not param_converter.regex.match(value):
             #    pass
