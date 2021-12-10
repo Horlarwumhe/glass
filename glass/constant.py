@@ -1,0 +1,1 @@
+TEMPLATE_FILENAME = '__file__'
