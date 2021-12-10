@@ -1,9 +1,9 @@
 import operator
 import re
 
+import glass.constant as const
 from . import nodes as Node
 from .utils import smart_split
-from . import constant as const
 
 TOKEN_REGEX = re.compile(
     r'''
