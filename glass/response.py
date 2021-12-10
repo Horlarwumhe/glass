@@ -232,7 +232,7 @@ class FileResponse(Response):
     def __init__(self, file, *args, **kwargs):
         if isinstance(file, (str, bytes)):
             self.filename = file
-            # The file will close once the response is
+            # The file will be closed once the response is
             # sent
             file = open(file, 'rb')
         elif isinstance(file, io.IOBase):
@@ -268,10 +268,10 @@ class FileResponse(Response):
 
     def __iter__(self):
         while 1:
-            r = self.content.read(2048)
-            if not r:
+            data = self.content.read(2048)
+            if not data:
                 return
-            yield r
+            yield data
 
 
 class TemplateResponse(Response):
