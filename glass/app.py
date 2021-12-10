@@ -237,6 +237,7 @@ class GlassApp:
             response = func()
             if response:
                 return response
+        return None
 
     def _call_after_request(self, response):
         return_value = None
@@ -326,6 +327,9 @@ class GlassApp:
         raise TypeError('view return unknown response type %s' %
                         response.__class__)
 
+    def close_resources(self):
+        request.close()
+
     def _get_response(self, environ):
         request.bind(environ)
         request.app = self
@@ -333,6 +337,7 @@ class GlassApp:
             self.session_cls.open()
             response = self._call_callback(environ)
             self.session_cls.save(response)
+            self.close_resources()
         return response
 
     def __call__(self, environ, start_response):

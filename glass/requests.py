@@ -1,3 +1,4 @@
+import io
 import json
 import urllib.parse
 from http.cookies import SimpleCookie
@@ -130,12 +131,12 @@ class Request:
              # use request.stream here
         """
         if hasattr(self, 'raw_data'):
-            return self.raw_data
+            return self.raw_data.getvalue()
         size = self.environ.get('CONTENT_LENGTH')
         if size:
             size = int(size)
         data = self.environ['wsgi.input'].read(size)
-        self.raw_data = data
+        self.raw_data = io.BytesIO(data)
         return data
 
     @property
@@ -188,6 +189,10 @@ class Request:
         raise AttributeError('Atrribute not defined "%s"' % name)
 
     def close(self):
+        try:
+            self.raw_data.close()
+        except AttributeError:
+            pass
         self.__storage__.clear()
 
     @cached_property()
