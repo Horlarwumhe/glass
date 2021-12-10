@@ -270,6 +270,67 @@ for
         no user available
      {% endfor %}
 
+
+.. versionadded:: 0.0.6
+
+Special variables
+
+When using the for tag, special special variables are added to the context.
+
+:func:`LoopCounter`
+
+Attributes.
+
+**loop.index**
+   
+   current iteration index (1 based indexing) of the loop
+
+**loop.index_0**
+
+  same as loop.index, but use 0 based indexing
+
+**loop.first**
+
+  returns True if this is the first iteration
+
+**loop.last**
+
+  returns True if this is the last iteration
+
+::
+
+    {% for user in  users %}
+
+      item number {{lopp.index}} is {{user.name}}
+      {% if loop.first %}
+          First iteration
+      {% elif loop.last %}
+         {{user.name}} Last item
+      {% endif %}
+    {% endfor %}
+
+Example.
+
+set color blue for first 3 items, red for last item and yellow for others.
+
+
+::
+
+    {% for user in users %}
+      {% if loop.index < 4 %}
+          {% set style="color:blue" %}
+
+      {% elif loop.last %}
+         {% set style="color:red" %}
+      {% else %}
+         {% set style="color:yellow" %}
+      {% endif %}
+
+    <p style="{{style}}">
+    {{user.name}}
+    </p>
+    {% endfor %}
+
 filter
 ~~~~~~~
 
@@ -312,7 +373,16 @@ block
          main content
      {% endblock %}
 
+set
+~~~~~~
 
+Use set tag to set variable in the template.
+
+::
+
+   {% set name="glass" id="id" %}
+
+   Hello {{name}}
 Using extends tag
 ----------------------
 

@@ -14,7 +14,7 @@ pattern_kwarg = re.compile(r'''
 
 
 def url_for_parser(parser):
-    # {%  url_for 'view' arg="val1" arg2=val2 arg3 = ' val ' %}
+    # {%  url_for 'view' arg="val1" arg2=val2 arg3=' val ' %}
     token = parser.get_next_token()
     _, args_str = token.clean_tag()
     args_list = smart_split(args_str)

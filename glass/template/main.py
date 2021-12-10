@@ -1,7 +1,10 @@
 import os
 
+
+import glass.constant as const
 from .filters import DEFAULT_FILTERS
 from .parser import Lexer, Parser, TemplateSyntaxError
+
 
 
 class Template:
@@ -26,7 +29,9 @@ class Template:
 
         self._compiled_nodes = None
         self.nodelist = None
+        self.body = None
         self.env = env
+        self.filename = ''
 
     def add_filters(self, filters):
         for name, func in filters.items():
@@ -39,6 +44,7 @@ class Template:
         if self._compiled_nodes is None:
             self.compile()
         self.context.update(context)
+        self.context[const.TEMPLATE_FILENAME] = self.filename
         return self._compiled_nodes.render(self.context, self.env)
 
     def add_tags(self, tags):
@@ -55,6 +61,8 @@ class Template:
         except TemplateSyntaxError as exc:
             details = []
             details.append(exc.msg)
+            filename = self.filename or '<string>'
+            details.append('file="%s",'%filename)
             if exc.token:
                 source = self.source.split('\n')
 
@@ -63,15 +71,15 @@ class Template:
                     line_source = source[line - 1].strip()
                 except IndexError:
                     line_source = ''
-                details.append('line( %s)' % line)
-                details.append('source( %s )' % line_source)
-            error = ' ,'.join(details)
-            raise TemplateSyntaxError(error, exc.token)
-        self.nodelist = self._compiled_nodes = nodelist
+                details.append('line=%s,'% line)
+                details.append('source=(%s),' % line_source)
+            error = ' '.join(details)
+            raise TemplateSyntaxError(error, exc.token) from None
+        self.nodelist = self._compiled_nodes = self.body = nodelist
         return self
 
     def __repr__(self):
-        return '<Template compiled=%s >' % bool(self._compiled_nodes)
+        return '<Template compiled=%s name="%s">' % (bool(self._compiled_nodes), self.filename)
 
 
 class TemplateLoader:
@@ -206,6 +214,7 @@ class Environment:
                     return template
         load_template = self.loader.load_template(template_name)
         template = Template(load_template, env=self)
+        template.filename = template_name
         template.compile()
         if self.cache is not None:
             self.cache.set(template_name, template)

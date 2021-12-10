@@ -137,6 +137,9 @@ class VarNode(Node):
         except ValueError:
             return context.get(var)
 
+    def __repr__(self):
+        return '<Var %s' % self.var_name
+
     @classmethod
     def parse(cls, var):
 
@@ -156,17 +159,17 @@ class VarNode(Node):
                 end = match.end()
                 var_name = match.group()
             else:
-                raise TemplateSyntaxError('couldnt parse %s ' % var)
+                raise TemplateSyntaxError('couldnt parse %s .' % var)
         for match in FILTER.finditer(var):
             start = match.start()
             if start != end:
-                raise TemplateSyntaxError('couldnt parse %s from ( %s )' %
+                raise TemplateSyntaxError('couldnt parse %s from ( %s ).' %
                                           (var[end:start], var))
             func = ''.join(match.group().split()).strip('|')
             funcs.append(func)
             end = match.end()
         if end != len(var):
-            raise TemplateSyntaxError('couldnt  parse %s from %s' %
+            raise TemplateSyntaxError('couldnt  parse %s from %s.' %
                                       (var[end:], var))
         return cls(var_name, funcs)
 
@@ -203,12 +206,15 @@ class ForNode(Node):
 
     def render(self, context, env=None):
         iter_object = self.iter_object.eval(context, env)
+        for_context = context.copy()
         if not hasattr(iter_object, '__iter__'):
             return ''
         loopvars = self.loopvars
         result = []
         multi = len(loopvars) > 1
         use_else = True
+        if not hasattr(iter_object, '__len__'):
+            iter_object = list(iter_object)
         for index, item in enumerate(iter_object):
             use_else = False
             if multi:
@@ -219,24 +225,20 @@ class ForNode(Node):
                 if item_len != len(loopvars):
                     raise TypeError(
                         "For loop sequence '%s' returned %s value(s),"
-                        " but loop variable has %s values(s), (%s)" %
+                        " but loop variable has %s values(s), (%s)." %
                         (self.iter_object.var, item_len, len(loopvars),
                          ','.join(loopvars)))
                 key_value = zip(loopvars, item)
-                context.update(key_value)
+                for_context.update(key_value)
             else:
-                context[self.loopvars[0]] = item
-            result.append(self.body.render(context, env))
+                for_context[self.loopvars[0]] = item
+            loop = LoopCounter(iter_object)
+            loop.set_index(index)
+            for_context['loop'] = loop
+            result.append(self.body.render(for_context, env))
         if use_else and self.else_ is not None:
 
-            return self.else_.body.render(context, env)
-        for var in self.loopvars:
-            # remove the loop variable from the context
-            # once the for node is rendered.
-            try:
-                context.pop(var)
-            except KeyError:
-                pass
+            return self.else_.body.render(for_context, env)
         return ''.join(result)
 
 
@@ -287,7 +289,7 @@ class ConditionNode(Node):
             return False
         except KeyError:
             # this should not occur.
-            raise TypeError('Unknown operator "%s"' % self.op)
+            raise TypeError('Unknown operator "%s".' % self.op)
 
 
 class ElifNode(Node):
@@ -326,7 +328,7 @@ class FilterNode(Node):
         return str(result)
 
     def __repr__(self):
-        return 'FilterNode filters=[{}]'.format(','.join(self.funcs))
+        return '<FilterNode filters=[{}]'.format(','.join(self.funcs))
 
 
 class IncludeNode(Node):
@@ -347,7 +349,7 @@ class IncludeNode(Node):
 class ExtendNode(Node):
     def __init__(self, template, nodelist):
         self.template = template
-        self.nodelist = nodelist
+        self.nodelist = self.body = nodelist
 
     def render(self, context, env=None):
         if env:
@@ -357,30 +359,49 @@ class ExtendNode(Node):
                 msg = "Couldn't find template refers to as '%s' in extend tag." % self.template.var_name
                 raise TemplateSyntaxError(msg)
             parent = env.get_template(template)
-            parent_nodelist = parent.nodelist
-            parent_blocks = parent_nodelist.get_node_by_type(BlockNode)
+            parent_nodelist = parent.body
+            extend = None
+            parent_blocks = iter([])
+            if len(parent_nodelist.nodelist) > 0:
+                first_node = parent_nodelist.nodelist[0]
+                if first_node.__class__ is self.__class__:
+                    extend = first_node
+                    parent_blocks = extend.nodelist.get_node_by_type(BlockNode)
+                else:
+                    parent_blocks = parent_nodelist.get_node_by_type(BlockNode)
+            parent_blocks = {block.name: block for block in parent_blocks}
             blocks = self.nodelist.get_node_by_type(BlockNode)
-            blocks = {block.name: block for block in blocks}
-            for block in parent_blocks:
-                if block.name in blocks:
-                    current_block = blocks[block.name]
-                    if current_block.is_super:
-                        block.nodelist.add_node(current_block)
-                    elif current_block.is_super_end:
-                        block.nodelist.insert_node(0, current_block)
+            for block in blocks:
+                if block.name in parent_blocks:
+                    current_block = parent_blocks[block.name]
+                    if block.is_super:
+                        current_block.nodelist.add_node(block)
+                    elif block.is_super_end:
+                        current_block.nodelist.insert_node(0, block)
                     else:
-                        parent.nodelist.replace_node(block, current_block)
+                        if extend:
+                            extend.nodelist.replace_node(current_block, block)
+                        else:
+                            parent.nodelist.replace_node(current_block, block)
+                elif extend:
+                    # This block is not found in the parent template. Parent template also
+                    # extends another template.
+                    extend.nodelist.add_node(block)
+                else:
+                    # block not found, parent doesn't extend other template.
+                    # ignore ? warning ? just append it ?
+                    pass
             return parent.render(context)
         return self.nodelist.render(context, env)
 
     def __repr__(self):
-        return 'ExtendNode template={}'.format(self.template)
+        return '<ExtendNode template={}'.format(self.template.var_name)
 
 
 class BlockNode(Node):
     def __init__(self, name, nodelist, is_super, is_super_end=False):
         self.name = name
-        self.nodelist = nodelist
+        self.nodelist = self.body = nodelist
         self.is_super = is_super
         self.is_super_end = is_super_end
 
@@ -391,6 +412,19 @@ class BlockNode(Node):
         return '<BlockNode name={} is_super={} is_super_end={}'.format(
             self.name, self.is_super, self.is_super_end)
 
+
+class SetNode(Node):
+
+    def __init__(self,kwargs):
+        self.kwargs = kwargs
+
+
+    def render(self,context,env=None):
+        resolved = {}
+        for key,value in self.kwargs.items():
+            resolved[key] = value.eval(context,env)
+        context.update(resolved)
+        return ""
 
 class NodeList(Node):
     def __init__(self, nodelist):
@@ -447,3 +481,36 @@ class NodeList(Node):
         if hasattr(self, '_original_nodes_'):
             return
         self._original_nodes_ = self.nodelist.copy()
+
+
+class LoopCounter:
+
+
+    def __init__(self,iteratable):
+        self._index = 0
+        self.iteratable = list(iteratable)
+
+    @property
+    def index(self):
+        # 1 based index
+        return self._index + 1
+
+    @property
+    def index_0(self):
+        # 0 based index
+        return self._index
+
+    @property
+    def first(self):
+        return self.index == 1
+
+    @property
+    def last(self):
+        return self.index == len(self.iteratable)
+
+
+    def set_index(self,index):
+        self._index = index
+
+
+
