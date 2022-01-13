@@ -14,7 +14,7 @@ SESSION_CONFIG = {
     'SESSION_COOKIE_SECURE': False,
     'SESSION_COOKIE_SAMESITE': None,
     'SECRET_KEY': '',
-    'SESSION_COOKIE_MAXAGE':None
+    'SESSION_COOKIE_MAXAGE': None
 }
 
 DEFAULT_CONFIG.update(SESSION_CONFIG)
@@ -53,13 +53,9 @@ class Config(dict):
 
         '''
         if isinstance(json_file, (bytes, str)):
-
-            try:
-                json_file = open(json_file)
-                configs = json_file.read()
-                return self.update(json.loads(configs))
-            finally:
-                json_file.close()
+            with open(json_file,'r',encoding='utf-8') as file:
+                config = file.read()
+                self.update(json.loads(config))
 
     def __getitem__(self, key):
         try:
