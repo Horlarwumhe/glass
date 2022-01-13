@@ -3,7 +3,6 @@ import hashlib
 import logging
 import pickle
 
-
 from glass._helpers import current_app as app
 from glass.requests import request
 from glass.utils import _thread_local

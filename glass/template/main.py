@@ -1,10 +1,9 @@
 import os
 
-
 import glass.constant as const
+
 from .filters import DEFAULT_FILTERS
 from .parser import Lexer, Parser, TemplateSyntaxError
-
 
 
 class Template:

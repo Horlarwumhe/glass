@@ -1,7 +1,9 @@
+import logging
 import sys
 import traceback
-import logging
+
 from glass import http
+
 from . import highlight
 
 ERROR_TEMPLATE = '''

@@ -1,6 +1,6 @@
-from .utils import _thread_local
 import threading
-import glass.sessions as _session
+
+from .utils import _thread_local
 
 
 class AppStack:
@@ -33,8 +33,8 @@ class App:
     def __enter__(self):
         return self._get_current_app().__enter__
 
-    def __exit__(self):
-        return self._get_current_app().__exit__
+    def __exit__(self,*args):
+        return self._get_current_app().__exit__(*args)
 
     def __getattr__(self, attr):
         return getattr(self._get_current_app(), attr)
@@ -59,6 +59,7 @@ class App:
 
 
 def flash(message, category=None):
+    import glass.sessions as _session
     flashes = _session.session.get('__flash__', None)
     if not flashes:
         flashes = _session.session['__flash__'] = []
@@ -66,6 +67,8 @@ def flash(message, category=None):
 
 
 def messages():
+    #This is deprecisted.
+    import glass.sessions as _session
     msgs = _session.session.get('__flash__', None)
     if msgs is None:
         return 

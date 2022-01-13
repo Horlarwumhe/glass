@@ -1,15 +1,16 @@
 import logging
 import os
 
-from glass.sessions import SessionManager
 from glass.config import Config
-from glass.exception import (HTTPError, InternalServerError)
+from glass.exception import HTTPError, InternalServerError
 from glass.requests import request
-from glass.response import JsonResponse, Response, Redirect, send_static
+from glass.response import JsonResponse, Redirect, Response, send_static
 from glass.routing import Router, Rule
-from glass.templating import AppTemplateEnviron, AppTemplateLoader, Cache
-from glass.templating import JinjaEnvironment, JinjaFileLoader
+from glass.sessions import SessionManager
+from glass.templating import (AppTemplateEnviron, AppTemplateLoader, Cache,
+                              JinjaEnvironment, JinjaFileLoader)
 from glass.utils import cached_property
+
 from ._helpers import app_stack
 
 logger = logging.getLogger('glass.app')
@@ -46,7 +47,9 @@ class GlassApp:
         self.view_func = {}
         static_url = self.config['STATIC_URL'] or 'static'
         static_url = static_url.strip('/')
-        self.add_url_rule('/%s/<path:filename>' % static_url, self.send_static, view_name='static')
+        self.add_url_rule('/%s/<path:filename>' % static_url,
+                          self.send_static,
+                          view_name='static')
 
     @cached_property()
     def template_env(self):

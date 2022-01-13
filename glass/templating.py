@@ -1,6 +1,7 @@
-from glass.template import Environment, FileLoader
 from glass._helpers import current_app as app
 from glass._helpers import flash_messages
+from glass.template import Environment, FileLoader
+
 from .templatetags import url_for_parser
 
 try:

@@ -1,13 +1,11 @@
-from .sessions import session
-from .requests import request
-from .response import Response
+from ._helpers import current_app
 from .app import GlassApp
-from ._helpers import current_app, flash, get_session_messages
-from .response import redirect
+from .requests import request
+from .response import Response, flash, get_session_messages, redirect
+from .sessions import session
+from .templating import render_string, render_template
 
-from .templating import render_template, render_string
 from. routing import url_for
 
 
 __version__ = '0.0.5'
-

@@ -1,10 +1,10 @@
 import re
 
-from glass.template.utils import smart_split
-from glass.template.parser import parse_variable
-from glass.template.parser import TemplateSyntaxError
-from glass.template.nodes import Node
 from glass.routing import url_for
+from glass.template.nodes import Node
+from glass.template.parser import TemplateSyntaxError, parse_variable
+from glass.template.utils import smart_split
+
 # from ._helpers import url_for
 
 pattern_kwag = re.compile(r"(\w+)\s*=\s(.+)*")

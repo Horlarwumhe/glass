@@ -9,9 +9,9 @@ from urllib.parse import unquote as urlunquote
 
 from glass import http, utils
 from glass.cookie import HTTPCookie
-from glass.types import Header
 from glass.sessions import session
 from glass.templating import render_template
+from glass.types import Header
 
 
 def _charset_from_content_type(text):
