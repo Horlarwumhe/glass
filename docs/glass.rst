@@ -199,19 +199,26 @@ You can write a converter to match this (``/1-2-3-4-5``) and convert it to list 
 ::
 
 
-   #the converter function
 
-   def int_list(values):
-       values = values.strip().split('-')
-       return list(map(int,values))
+   class IntList:
+       name = 'int_list'
+       regex = r'(\d+\-?)+'
+
+       def to_python(self,value):
+           values = values.strip().split('-')
+           return list(map(int,values))
+
+       def to_url(self,value):
+          if isinstance(value,str):
+              return value
+          return '-'.join(map(str,value))
+
 
    app = GlassApp()
    # register the converter
-   # first argument is the converter name
-   # second argument is regex for the converter
-   # third argument is the callback function
 
-   app.url_converter('int_list',r'(\d+\-?)+',int_list)
+   app.use_converter(IntList)
+   
    #this will match integers seperated by - (1-2-78-3)
    #
    #http://domain.com/nums/1-23-34
@@ -1015,10 +1022,10 @@ Here is a simple example of how to authenticate user.
     from glass import GlassApp
 
     from your_app.db import get_user, auth_user
- 
-    @app.route('/home')
+
     app = GlassApp()
 
+    @app.route('/home')
     def home():
         if request.user is None:
             username = 'Guest'
