@@ -67,7 +67,7 @@ def flash(message, category=None):
 
 
 def messages():
-    #This is deprecisted.
+    #This is depreciated.
     import glass.sessions as _session
     msgs = _session.session.get('__flash__', None)
     if msgs is None:

@@ -204,6 +204,10 @@ class GlassApp:
     def url_converter(self, name, regex, func):
         self.router.add_converter(name, regex, func)
 
+
+    def use_converter(self,converter):
+        self.router.use_converter(converter)
+
     def run(self, host='127.0.0.1', port=8000, debug=None, auto_reload=False):
         """Run the application development server.
 

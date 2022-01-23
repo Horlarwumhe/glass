@@ -1,7 +1,7 @@
-from glass import url_for, GlassApp
 from urllib.parse import unquote
 
 import pytest
+from glass import GlassApp, url_for
 
 app = GlassApp()
 

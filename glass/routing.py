@@ -1,8 +1,10 @@
 import re
-from urllib.parse import (
-    urlparse, urlunparse, urlencode, quote as urlquote)
 import types
+from urllib.parse import quote as urlquote
+from urllib.parse import urlencode, urlparse, urlunparse
+
 from glass.exception import HTTP404, MethodNotAllow
+
 # from glass.requests import request
 from ._helpers import current_app as app
 
@@ -10,22 +12,28 @@ RULE_REGEX = re.compile(r'<(?:(?P<converter>[^>:]+):)?(?P<parameter>\w+)>')
 
 CONVERTERS_REGEX = {'int': r'\d+', 'path': r'.+', 'str': r'[^/]+'}
 
-CONVERTERS = {'int': int, 'str': str, 'path': str}
+# CONVERTERS = {'int': int, 'str': str, 'path': str}
 
 
 class ParamConverter:
     def __init__(self, name, converter):
         self.param_name = name
-        regex = CONVERTERS_REGEX[converter]
-        self.regex = re.compile(regex)
-        self.func = CONVERTERS[converter]
-        self.converter_name = converter
+        self.regex = converter.regex  # raw regex
+        self.c_regex = re.compile(self.regex)  # compiled regex
+        self.converter_name = converter.name
+        self.converter = converter
 
     def __call__(self, *args):
-        return self.func(*args)
+        return self.__class__
 
     def __repr__(self):
-        return '<Param %s --> %s' % (self.param_name, self.func)
+        return '<Param %s --> %s' % (self.param_name, self.converter_name)
+
+    def to_python(self, value):
+        return self.converter.to_python(value)
+
+    def to_url(self, value):
+        return self.converter.to_url(value)
 
 
 class Rule:
@@ -61,11 +69,12 @@ class Rule:
                             (self.url_rule, missing_args))
         for _, param_converter in self.params.items():
             try:
-                value = str(kwargs.pop(param_converter.param_name))
+                value = kwargs.pop(param_converter.param_name)
             except KeyError:
                 # unlikely to occur. line 58 above.
                 raise
-            # if not param_converter.regex.match(value):
+            value = param_converter.to_url(value)
+            # if not param_converter.c_regex.match(value):
             #    pass
             sub = '<(%s:)?%s>' % (param_converter.converter_name,
                                   param_converter.param_name)
@@ -105,13 +114,13 @@ class Router:
                 # no converter, default is str
                 converter = 'str'
             try:
-                regex = CONVERTERS_REGEX[converter]
+                converter_cls = CONVERTERS[converter]
             except KeyError:
                 raise TypeError("unknown converter %s for the rule '%s'" %
                                 (converter, original_route))
-            param_converter = ParamConverter(parameter, converter)
+            param_converter = ParamConverter(parameter, converter_cls())
             converters[parameter] = param_converter
-            parts.append('(?P<' + parameter + '>' + regex + ')')
+            parts.append('(?P<' + parameter + '>' + converter_cls.regex + ')')
         if original_route.endswith('/'):
             parts.append('?')
         parts.append('$')
@@ -120,7 +129,7 @@ class Router:
     def add(self, rule):
         '''add new url rule'''
         regex, params = self.compile(rule.url_rule)
-        rule.converter = dict((k, v.func) for k, v in params.items())
+        #rule.converter = dict((k, v.func) for k, v in params.items())
         regex = re.compile(regex)
         rule.regex = regex
         rule.params = params
@@ -135,7 +144,7 @@ class Router:
             match = regex.match(path)
             if match:
                 kwargs = match.groupdict()
-                kwargs = self.apply_converter(kwargs, rule.converter)
+                kwargs = self.apply_converter(kwargs, rule)
                 if not kwargs:
                     # static url rule,
                     # example: /login/,/user/reset/ ...
@@ -145,7 +154,7 @@ class Router:
                 return rule, kwargs
         raise HTTP404()
 
-    def apply_converter(self, view_kwargs, converters):
+    def apply_converter(self, view_kwargs, rule):
         '''apply converter to url rule
         if the url rule == '/<str:user>/<int:user_id>'
         for this url '/horlar/1',
@@ -158,11 +167,11 @@ class Router:
         '''
         applied = {}
         for param, value in view_kwargs.items():
-            func = converters.get(param)
-            if not func:
+            converter = rule.params.get(param)
+            if not converter:
                 applied[param] = value
                 continue
-            applied[param] = func(value)
+            applied[param] = converter.to_python(value)
         return applied
 
     def add_converter(self, name, regex, func):
@@ -172,6 +181,9 @@ class Router:
             raise ValueError('bad re syntax %s' % regex)
         CONVERTERS_REGEX[name] = regex
         CONVERTERS[name] = func
+
+    def use_converter(self, converter):
+        CONVERTERS[converter.name] = converter
 
 
 def url_for(view_name, **kwargs):
@@ -242,5 +254,52 @@ def url_for(view_name, **kwargs):
     if not netloc and scheme:
         scheme = ''
     query_string = urlencode(kwargs)
-    url = urlunparse((scheme, netloc, urlquote(path), '', query_string, fragment))
+    url = urlunparse(
+        (scheme, netloc, urlquote(path), '', query_string, fragment))
     return url
+
+
+class BaseCoverter:
+
+    regex = ''
+    name = ''
+
+    def to_url(self, value):
+        return NotImplemented
+
+    def to_python(self, value):
+        pass
+
+
+class StrConverter(BaseCoverter):
+    regex = r'[^/]+'
+    name = 'str'
+
+    def to_url(self, value):
+        return str(value)
+
+    def to_python(self, value):
+        return str(value)
+
+
+class IntConverter(BaseCoverter):
+    regex = r'\d+'
+    name = 'int'
+
+    def to_url(self, value):
+        return str(value)
+
+    def to_python(self, value):
+        return int(value)
+
+
+class PathConverter(StrConverter):
+    regex = r'.+'
+    name = 'path'
+
+
+CONVERTERS = {
+    'int': IntConverter,
+    'str': StrConverter,
+    'path': PathConverter,
+}
