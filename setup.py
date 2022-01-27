@@ -5,7 +5,7 @@ description = file.read()
 file.close()
 setuptools.setup(
     name="glass-web",
-    version="0.0.6",
+    version="0.0.7",
     author="Horlarwumhe",
     author_email="amachiever4real@gmail.com",
     description="A library for building web applications",

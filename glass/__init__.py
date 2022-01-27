@@ -8,4 +8,4 @@ from .templating import render_string, render_template
 from. routing import url_for
 
 
-__version__ = '0.0.5'
+__version__ = '0.0.7'

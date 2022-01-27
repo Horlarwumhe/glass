@@ -1,6 +1,13 @@
 CHANGELOG
 =============
 
+
+v.0.07
+-------
+
+This release includes minor bugs fix
+
+
 v0.0.6
 -------
 
