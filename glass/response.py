@@ -174,7 +174,7 @@ class Response(BaseResponse):
             content = utils.encode(content, self.charset)
             self.headers['Content-Length'] = str(len(content))
         self.content = content
-        if self.status_code == 204:
+        if self.status_code  in (204,304):
             # (rfc2616 section 10.2.3 and 10.3.5)
             for header in ('Content-Type', 'Content-Length'):
                 self.headers.pop(header, None)
