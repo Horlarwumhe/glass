@@ -74,7 +74,7 @@ class VarNode(Node):
         # example, {{name.split}} which return list
         return str(ret)
 
-    def eval(self, ctx, env=None):
+    def eval(self, ctx, env=None,funcargs=False):
         '''This wil be called when VarNode is part of a block tag
         eg. {% for name is names %}, {% if name %}, this will be called
         to know what (name) is.
@@ -85,7 +85,10 @@ class VarNode(Node):
         # var = self.var
         if self.var[0] in ("'", '"'):
             quote = self.var[0]
-            i = self.var.index(quote, 1)
+            try:
+                i = self.var.index(quote, 1)
+            except ValueError:
+                raise TemplateSyntaxError("Bad string %s"%self.var) from None
             string = self.var[:i + 1]
             attrs = self.var[i + 1:]
             attrs = attrs.split('.')
@@ -123,11 +126,14 @@ class VarNode(Node):
 
             else:
                 return
+        if funcargs:
+            return var
         if env:
-            for func in self.funcs:
+            for func,args in self.funcs:
                 callback = env.filters.get(func)
                 if callback:
-                    var = callback(var)
+                    args = [self.__class__(arg).eval(ctx,env,funcargs=True) for arg in args]
+                    var = callback(var,*args)
         return var
 
     def resolve(self, var, context):
@@ -511,6 +517,3 @@ class LoopCounter:
 
     def set_index(self,index):
         self._index = index
-
-
-

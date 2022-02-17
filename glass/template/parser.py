@@ -22,7 +22,7 @@ STRING = re.compile(r'''
 ''', re.VERBOSE)
 
 FILTER = re.compile(r'''
-\s*\|\s*\w+
+(\s*\|\s*\w+)\s*(\((.*?)\))?\s*
 ''', re.VERBOSE)
 
 operators = ('in', '==', '>', '<', '>=', '<=', '!=', 'and', '+', '-', '*', '/',
@@ -98,6 +98,10 @@ class Lexer:
                     tokens.append(Token('BLOCK', self.clean(content), lineno))
                 else:
                     tokens.append(Token('BLOCK', self.clean(content), lineno))
+            elif token.startswith("{#"):
+                # comment
+                lineno += token.count('\n')
+                continue
             else:
                 if not token.isspace():
                     tokens.append(Token("TEXT", token, lineno))
@@ -220,9 +224,11 @@ def parse_variable(var):
         if start != end:
             raise TemplateSyntaxError('couldnt parse %s from ( %s ).' %
                                       (var[end:start], var))
-        func = ''.join(match.group().split()).strip('|')
-        funcs.append(func)
+        func = ''.join(match.group(1).split()).strip('|')
         end = match.end()
+        args = match.group(3) or ""
+        args = smart_split(args.strip())
+        funcs.append((func,args))
     if end != len(var):
         raise TemplateSyntaxError('couldnt  parse %s from %s.' %
                                   (var[end:], var))

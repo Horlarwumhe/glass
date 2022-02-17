@@ -181,5 +181,6 @@ def test_url_for_in_tags():
     url_for_values = list((v.var_name for v in node.view_kwargs.values()))
     assert url_for_kwargs == ['_scheme', '_target', 'param1', 'param2']
     assert url_for_values == ['"http"', '"target"', '"value1"', 'param.meth']
-    func = node.view_kwargs['_target'].funcs
-    assert func == ['upper', 'url']
+    funcs = node.view_kwargs['_target'].funcs
+    funcs = list(dict(funcs))
+    assert funcs == ['upper', 'url']

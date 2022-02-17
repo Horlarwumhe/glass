@@ -70,3 +70,8 @@ def decode(value, encoding='utf-8'):
     if isinstance(value, (bytes, bytearray)):
         return value.decode(encoding)
     return value
+
+
+def get_random(size,key=None):
+    token = secrets.token_urlsafe(size)
+    return token
