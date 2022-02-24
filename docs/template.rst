@@ -79,7 +79,44 @@ using multiple filters;
 
     {{user.name | upper | lower | escape}}
 
-using block filter tag;
+
+
+Passing arguments to filters
+
+::
+
+   {{var|func(arg1 arg2 arg3)}}
+
+::
+
+Note:
+   No ``,`` between the function arguments
+
+::
+
+  def func(var,arg1,arg2,arg3):
+      return var+arg1+arg2+arg3
+
+
+::
+
+    {{text|split("\n") }}
+
+::
+
+   def split(text,s):
+      return "".join(text.split(s))
+
+::
+
+  def format_price(price,currency):
+      return "%s%s"%(currency,price)
+
+
+::
+
+   {{price|fromat_price("$")}}
+
 
 ::
 
@@ -98,6 +135,8 @@ Using Python ``dict`` or ``list`` in the template.
    {{list.0}} list[0]
 
    {{ list.2.upper }} # list[2].upper()
+
+using block filter tag;
 
 
 >>> from glass.template  import Environment
@@ -124,30 +163,26 @@ Using Python ``dict`` or ``list`` in the template.
 Loading template from file
 ------------------------------
 
->>> from glass.template import Environment
->>> env = Environment()
->>> out = env.render_template('index.htm',{'user':'username'})
-Traceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-  File "C:\Users\ADMIN\Desktop\projects\glass\glass\template\main.py", line 125, in render_template
-    load_template = self.loader.load_template(template_name)
-  File "C:\Users\ADMIN\Desktop\projects\glass\glass\template\main.py", line 76, in load_template
-    raise OSError("Template not found %s" % path)
-OSError: Template not found C:\Users\ADMIN\Desktop\projects\glass\templates\index.htm
->>>
+::
 
-   The default template loader, class :class:`~glass.template.main.FileLoader`, will look for the templates in the current working directory and  folder ``templates``  in the current working directory.
-
-   You can set different directory to find templates.
+    from glass.template import Environment
+    env = Environment()
+    out = env.render_template('index.htm',{'user':'username'})
 
 
-   >>> from glass.template import FileLoader
-   >>> from glass.template import Environment
-   >>> env = Environment(loader=FileLoader('/path/to/templates'))
-   >>> # or 
-   >>> env = Environment(loader=FileLoader(['/path/to/templates','/path/to/other/template']))
-   >>> template = env.get_template('index.html')
-   >>> template.render({})
+The default template loader, class :class:`~glass.template.main.FileLoader`, will look for the templates in the current working directory and  folder ``templates``  in the current working directory.
+
+You can set different directory to find templates.
+
+::
+
+   from glass.template import FileLoader
+   from glass.template import Environment
+   env = Environment(loader=FileLoader('/path/to/templates'))
+   # using multiple directories
+   env = Environment(loader=FileLoader(['/path/to/templates','/path/to/other/template']))
+   template = env.get_template('index.html')
+   template.render({})
 
 
 
@@ -523,24 +558,36 @@ Custom Template Filter
 ------------------------
 You can write filter(s) to use in the template(s).
 
+::
 
->>> def secret(value):
-...    return  value[:5]+'********'
-...
->>> def lower(value):
-...    return value.lower()
->>> s = '''{% filter secret %}{{email}}{%end%}'''
->>> filters = {'secret':secret,'lower':lower }
->>> env = Environment(filters=filters)
->>> t = env.from_string(s)
->>> out = t.render({'email':'usermail@gmail.com'})
->>> print(out)
-userm********
->>>
->>> out = env.from_string("{{email|secret}}")
->>> print(out.render({'email':'usermail@gmail.com'}))
-userm********
->>> 
+     def secret(value):
+        return  value[:5]+'********'
+
+     def lower(value):
+        return value.lower()
+
+     def split_words(text,count=3):
+         return " ".join(text.split()[:count])+'....'
+
+     s = '''{% filter secret %}{{email}}{%end%}'''
+     filters = {'secret':secret,'lower':lower,'split_words':split_words }
+     env = Environment(filters=filters)
+     t = env.from_string(s)
+     out = t.render({'email':'usermail@gmail.com'})
+     print(out)
+       # userm********
+
+     out = env.from_string("{{email|secret}}")
+     print(out.render({'email':'usermail@gmail.com'}))
+     #userm********
+     
+     t = env.from_string("{{post | split_words}}")
+     print(t.render({'post':'this is a long text and another text'}))
+     # this is a....
+
+     t = env.from_string("{{post | split_words(5)}}")
+     print(t.render({'post':'this is a long text and another text'}))
+      # this is a long text....
 
 or using decorator;
 
@@ -549,6 +596,10 @@ or using decorator;
      @env.filter('upper')
      def func(value):
         return value.upper()
+
+     @env.filter("split_words")
+     def split_words(text,count=3):
+         return " ".join(text.split()[:count])+'....'
 
 
 .. _custom-tag:

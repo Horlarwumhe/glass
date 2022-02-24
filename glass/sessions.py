@@ -123,7 +123,7 @@ class Session(dict):
         try:
             return self.session_data[key]
         except (KeyError, TypeError):
-            raise KeyError(key)
+            raise KeyError(key) from None
 
 
     def __iter__(self):
@@ -204,5 +204,62 @@ class SessionManager:
         cookie = encode_session(data, key)
         response.set_cookie(name, cookie, **cookie_config)
 
+
+
+
+# class Redis:
+
+
+#     def set(self,key,value):
+
+#         self._lib.set(key,value)
+
+#     def get(self,key,default=None):
+#         return self._lib.get(key)
+
+# class RedisSessionManager:
+     
+#      def __init__(self,host='',port=0,db=1):
+#         self._redis = Redis(host,port=port,db=db)
+
+#     def open(self):
+#         key = app.config['SECRET_KEY']
+#         name = app.config['SESSION_COOKIE_NAME']
+#         cookie = request.cookies.get(name)
+#         data = {}
+#         if cookie:
+#             redis_data = self._redis.get(cookie)
+#             if redis_data:
+#                 data = pickle.loads(redis_data)
+#         session.bind(data)
+        
+
+#     def save(self,response=None):
+#         key = app.config['SECRET_KEY']
+#         cookie_config = _get_session_cookie_config()
+#         data = session.session_data
+#         name = app.config['SESSION_COOKIE_NAME']
+#         previous_cookie = request.cookies.get(name)
+#         if not data:
+#             if not session.modified:
+#                 return
+#             #TODO: add path,domain to delete_cookie
+#             response.delete_cookie(name, **cookie_config)
+#             self._redis.delete(previous_cookie)
+#             return
+#         if not session.modified:
+#             response.set_cookie(name, previous_cookie, **cookie_config)
+#             return
+#         expire = app.config["SESSION_COOKIE_EXPIRE"]
+#         if expire:
+#             try:
+#                 expire  = int(expire)
+#             except ValueError:
+#                 expire = 324543
+#         session_data = pickle.dumps(data)
+#         cookie = previous_cookie or get_random(35)
+#         self._redis.setx(cookie,time.time() + expire,session_data)
+#         response.set_cookie(name,cookie,**cookie_config)
+        
 
 session = Session()

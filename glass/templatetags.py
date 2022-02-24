@@ -28,7 +28,7 @@ def url_for_parser(parser):
         try:
             key, value = map(str.strip, args.split('=', 1))
         except ValueError:
-            raise TemplateSyntaxError('malformed argumentin url_for tag',
+            raise TemplateSyntaxError('malformed argument in url_for tag',
                                       token)
         view_kwargs[key] = parse_variable(value)
     view_name = parse_variable(view_name)

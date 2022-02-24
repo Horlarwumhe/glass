@@ -148,7 +148,14 @@ class Request:
 
     @property
     def user_agent(self):
+        """HTTP User-Agent"""
         return self.environ.get('HTTP_USER_AGENT', '')
+
+
+    @property
+    def remote_addr(self):
+        """returns client IP address"""
+        return self.environ.get("REMOTE_ADDR","")
 
     @property
     def stream(self):

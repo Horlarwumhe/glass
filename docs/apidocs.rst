@@ -3,7 +3,7 @@ API
 
 Request
 =============================
-   .. automodule:: glass.requests
+   .. autoclass:: glass.requests.Request
      :members:
 
 Response
@@ -14,14 +14,14 @@ Response
 
 GlassApp
 ========================
-    .. automodule:: glass.app
+    .. autoclass:: glass.app.GlassApp
       :members:
 
 
 
 Session
 ==========
-    .. automodule:: glass.sessions
+    .. autoclass:: glass.sessions.Session
        :members:
 
 

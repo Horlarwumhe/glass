@@ -1330,6 +1330,20 @@ in the template file;
    <b> {{user.email|secret}}</b>
 
 
+Filters can take optional arguments;
+
+::
+
+   <div> {{user.email | secret("#")}} </div>
+
+::
+
+   def secret(value,by=None):
+       if by is None:
+           return value[:5]+'******'
+        return value[:5]+by*5
+
+
 
 Tags
 ~~~~~~~~
