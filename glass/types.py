@@ -53,6 +53,7 @@ class WSGIHeader(dict):
                 key = key.lstrip('HTTP').lstrip('-')
             key = key.title()
             yield key, value
-
+    def __contains__(self,key):
+        return bool(self.get(key))
     def __repr__(self):
         return str(dict(list(self)))

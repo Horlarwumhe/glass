@@ -13,6 +13,8 @@ from glass.sessions import session
 from glass.templating import render_template
 from glass.types import Header
 
+from .constant import REDIRECT_MESSAGE
+
 
 def _charset_from_content_type(text):
     match = re.search(r';\s*charset=(?P<charset>[^\s;]+)', text, re.I)
@@ -76,7 +78,7 @@ class BaseResponse:
         :param value: cookie value
         :param kw: optional keywords argument
             ``max_age``, ``samesite``, ``domain``
-            ``path``, ``expires``,``httponly``, ``secure``.
+            ``path``, ``expires``, ``httponly``, ``secure``.
 
         Example::
 
@@ -331,6 +333,8 @@ def send_static(filename, app, request):
 
 
 def redirect(location, code=302, response=''):
+    if not response:
+        response = REDIRECT_MESSAGE.format(location,location)
     return Redirect(location, content=response, status_code=code)
 
 
