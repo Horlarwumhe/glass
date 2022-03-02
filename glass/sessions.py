@@ -1,13 +1,22 @@
 import base64
+import email.utils
 import hashlib
 import logging
 import pickle
+import time
 
 from glass._helpers import current_app as app
 from glass.requests import request
 from glass.utils import _thread_local
 
-log = logging.getLogger('glass.app')
+from .utils import get_random
+
+try:
+    import redis
+except ImportError:
+    redis = None
+
+log = logger = logging.getLogger('glass.app')
 
 
 def _get_session_cookie_config():
@@ -18,6 +27,8 @@ def _get_session_cookie_config():
     cookie_config['Path'] = app.config['SESSION_COOKIE_PATH'] or '/'
     expire = app.config['SESSION_COOKIE_EXPIRE']
     if expire:
+        t = int(time.time())+int(expire)
+        expire = email.utils.formatdate(t,usegmt=True)
         cookie_config['Expires'] = expire
     max_age = app.config['SESSION_COOKIE_MAXAGE']
     if max_age:
@@ -123,7 +134,7 @@ class Session(dict):
         try:
             return self.session_data[key]
         except (KeyError, TypeError):
-            raise KeyError(key)
+            raise KeyError(key) from None
 
 
     def __iter__(self):
@@ -204,5 +215,75 @@ class SessionManager:
         cookie = encode_session(data, key)
         response.set_cookie(name, cookie, **cookie_config)
 
+
+
+
+# class Redis:
+
+
+#     def set(self,key,value):
+
+#         self._lib.set(key,value)
+
+#     def get(self,key,default=None):
+#         return self._lib.get(key)
+
+class RedisSessionManager:
+     
+    def __init__(self,host='',port=6379,db=1):
+        if redis is None:
+            raise ImportError("redis module is not installed")
+        self._redis = redis.Redis(host=host,port=port,db=db)
+
+    def open(self):
+        key = app.config['SECRET_KEY']
+        name = app.config['SESSION_COOKIE_NAME']
+        cookie = request.cookies.get(name)
+        data = {}
+        if cookie:
+            redis_data = self._redis.get(cookie)
+            if redis_data:
+                try:
+                    data = pickle.loads(redis_data)
+                except pickle.PickleError as e:
+                    logger.info("Failed to loads session data %s",e)
+                    data = {}
+            else:
+                print("sent cookie not found in redis")
+        session.bind(data)
+        
+
+    def save(self,response=None):
+        key = app.config['SECRET_KEY']
+        cookie_config = _get_session_cookie_config()
+        data = session.session_data
+        name = app.config['SESSION_COOKIE_NAME']
+        previous_cookie = request.cookies.get(name)
+        if not data:
+            if not session.modified:
+                return
+            #TODO: add path,domain to delete_cookie
+            response.delete_cookie(name, **cookie_config)
+            self._redis.delete(previous_cookie)
+            return
+        if not session.modified:
+            response.set_cookie(name, previous_cookie, **cookie_config)
+            return
+        expire = (
+            app.config["SESSION_COOKIE_MAXAGE"]\
+            or app.config["SESSION_COOKIE_EXPIRE"]
+            )
+        if expire:
+            try:
+                expire  = int(expire)
+            except ValueError:
+                expire = 60 * 60 * 24 * 30
+        else:
+            expire = 60 * 60 * 24 * 30
+        session_data = pickle.dumps(data)
+        cookie = previous_cookie or get_random(35)
+        self._redis.set(cookie,session_data,ex=int(expire))
+        response.set_cookie(name,cookie,**cookie_config)
+        
 
 session = Session()

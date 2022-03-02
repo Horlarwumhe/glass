@@ -153,7 +153,7 @@ class VarNode(Node):
             "classmethod nodes.VarNode.parse is depreciated."
             " Use function variable_parse() in glass.template.parser",
             UserWarning)
-        var = var.strip()
+        var = var.strip().rstrip()
         match = VAR.match(var)
         funcs = []
         if match:
@@ -165,19 +165,21 @@ class VarNode(Node):
                 end = match.end()
                 var_name = match.group()
             else:
-                raise TemplateSyntaxError('couldnt parse %s .' % var)
+                raise TemplateSyntaxError('couldnt parse %s.' % var)
         for match in FILTER.finditer(var):
             start = match.start()
             if start != end:
                 raise TemplateSyntaxError('couldnt parse %s from ( %s ).' %
                                           (var[end:start], var))
-            func = ''.join(match.group().split()).strip('|')
-            funcs.append(func)
+            func = ''.join(match.group(1).split()).strip('|')
             end = match.end()
+            args = match.group(3) or ""
+            args = smart_split(args.strip())
+            funcs.append((func,args))
         if end != len(var):
             raise TemplateSyntaxError('couldnt  parse %s from %s.' %
                                       (var[end:], var))
-        return cls(var_name, funcs)
+        return cla(var_name, funcs)
 
 
 class IfNode(Node):
