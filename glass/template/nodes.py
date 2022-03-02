@@ -10,12 +10,13 @@ logger = logging.getLogger('glass.template')
 VAR = re.compile(r'''
 ^[\w_\.]+
 ''', re.VERBOSE)
+
 STRING = re.compile(r'''
-(('.*')|".*")(\.\w+)*
+(('.*?')|".*?")(\.\w+)*
 ''', re.VERBOSE)
 
 FILTER = re.compile(r'''
-\s*\|\s*\w+
+(\s*\|\s*\w+)\s*(\((.*?)\))?\s*
 ''', re.VERBOSE)
 
 operators = {
