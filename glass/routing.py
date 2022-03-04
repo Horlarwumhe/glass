@@ -8,7 +8,7 @@ from glass.exception import HTTP404, MethodNotAllow
 # from glass.requests import request
 from ._helpers import current_app as app
 
-RULE_REGEX = re.compile(r'<(?:(?P<converter>[^>:]+):)?(?P<parameter>\w+)>')
+RULE_REGEX = re.compile(r'<(?:(?P<converter>[^>:]+):)?(?P<parameter>\w+)>\??')
 
 CONVERTERS_REGEX = {'int': r'\d+', 'path': r'.+', 'str': r'[^/]+'}
 
@@ -22,6 +22,7 @@ class ParamConverter:
         self.c_regex = re.compile(self.regex)  # compiled regex
         self.converter_name = converter.name
         self.converter = converter
+        self.optional = False
 
     def __call__(self, *args):
         return self.__class__
@@ -44,6 +45,7 @@ class Rule:
         self.converter = {}
         self.params = {}
         self.regex = ''
+       
 
     def __repr__(self):
         return '<Rule %s --> %s, {%s}' % (self.url_rule, self.callback,
@@ -65,19 +67,28 @@ class Rule:
         out = self.url_rule
         missing_args = set(self.params) - set(kwargs)
         if missing_args:
-            raise TypeError("Rule (%s) missing required parameters %s " %
-                            (self.url_rule, missing_args))
+            for arg in missing_args:
+                p = self.params[arg]
+                if not p.optional:
+                    raise TypeError("Rule (%s) missing required parameter %s " %
+                            (self.url_rule, arg))
         for _, param_converter in self.params.items():
+            missing = False
             try:
                 value = kwargs.pop(param_converter.param_name)
+                value = param_converter.to_url(value)
             except KeyError:
-                # unlikely to occur. line 58 above.
-                raise
-            value = param_converter.to_url(value)
+                missing = True
+                value = ''
+            
             # if not param_converter.c_regex.match(value):
             #    pass
             sub = '<(%s:)?%s>' % (param_converter.converter_name,
                                   param_converter.param_name)
+            if param_converter.optional:
+                sub += r"\?"
+            if missing:
+                sub = '/'+sub
             pattern = re.compile(sub)
             out = pattern.sub(value, out)
         return out
@@ -106,6 +117,10 @@ class Router:
             parts.append(re.escape(rule[:match.start()]))
             rule = rule[match.end():]
             parameter = match.group('parameter')
+            optional = match.group().endswith('?')
+            if optional:
+                # mark previuos / as optional
+                parts.append('?')
             if not parameter.isidentifier():
                 raise TypeError('invalid identifier (%s) in URL rule %s' %
                                 (parameter, original_route))
@@ -119,8 +134,18 @@ class Router:
                 raise TypeError("unknown converter %s for the rule '%s'" %
                                 (converter, original_route))
             param_converter = ParamConverter(parameter, converter_cls())
+            if optional:
+                param_converter.optional = True
             converters[parameter] = param_converter
-            parts.append('(?P<' + parameter + '>' + converter_cls.regex + ')')
+            r = ['(?P<',parameter,'>']
+            if optional:
+                r.append('(')
+            r.append(converter_cls.regex)
+            if optional:
+                r.append(')?')
+            r.append(')')
+            parts.append(''.join(r))
+            # parts.append('(?P<' + parameter + '>(' + converter_cls.regex + '%s))'%"?"*optional)
         if original_route.endswith('/'):
             parts.append('?')
         parts.append('$')
@@ -290,6 +315,8 @@ class IntConverter(BaseCoverter):
         return str(value)
 
     def to_python(self, value):
+        if not value:
+            return None
         return int(value)
 
 

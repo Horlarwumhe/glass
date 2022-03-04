@@ -26,6 +26,19 @@ def get_post(id, title):
     return "hello"
 
 
+@app.route('/<user_id>/<token>?/reset') # <token> optional
+def do_reset(user_id,token=None):
+    return "heloo"
+
+@app.route('/<user_id>/reset/<token>?') # <token> optional
+def do_reset_2(user_id,token=None):
+    return "heloo"
+
+@app.route('/reset/<id>?/<token>?/test/') #<id> and <token> optional
+def do_reset_3(id=None,token=None):
+    return "hello"
+
+
 def test_url_for_no_servername():
     # no server name
     with app.mount():
@@ -118,7 +131,40 @@ def test_url_for_with_scheme():
         assert path == 'https://blog.Horlarwumhe.me/u/login#loginForm'
 
 
-def test_all():
+def test_url_for_with_optinal_params():
+    app.config['SERVER_NAME'] = 'https://blog.Horlarwumhe.me'
+    with app.mount():
+        path = 'https://blog.Horlarwumhe.me/1/user-token/reset'
+        assert url_for('do_reset',user_id=1,token='user-token') == path
+
+        # token not provided
+        path = 'https://blog.Horlarwumhe.me/1/reset'
+        assert url_for('do_reset',user_id=1) == path
+
+        path = 'https://blog.Horlarwumhe.me/1/reset/reset-token'
+        assert url_for('do_reset_2',user_id=1,token='reset-token') == path
+
+        path = 'https://blog.Horlarwumhe.me/1/reset'
+        assert url_for('do_reset_2',user_id=1) == path
+
+
+        path = 'https://blog.Horlarwumhe.me/reset/2/reset-token/test/'
+        assert url_for('do_reset_3',id=2,token='reset-token') == path
+        
+        path = 'https://blog.Horlarwumhe.me/reset/test/'
+        # both id and token not given
+        assert url_for('do_reset_3') == path
+  
+        path = 'https://blog.Horlarwumhe.me/reset/3/test/'
+        # id only given
+        assert url_for('do_reset_3',id=3) == path
+
+        path = 'https://blog.Horlarwumhe.me/reset/reset-token/test/'
+        # token only given
+        assert url_for('do_reset_3',token="reset-token") == path
+
+
+
     app.config['SERVER_NAME'] = ''
     with app.mount():
         path = url_for('get_post',

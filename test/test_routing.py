@@ -1,9 +1,8 @@
 import sys
 
 import pytest
-
-from glass.routing import Rule, Router
 from glass.exception import HTTP404
+from glass.routing import Router, Rule
 
 environ = {}
 
@@ -31,3 +30,60 @@ def test_route():
     rule, kwargs = router.match(environ)
     assert rule is rule3
     assert kwargs == {'user': 90}
+
+
+def test_optional_params():
+    r = '/settings/<name>/<value>?'
+    # <value> is optional
+    rule1 = Rule(r)
+    router = Router()
+    router.add(rule1)
+    environ['PATH_INFO'] = '/settings/security/auth'
+    rule, kwargs = router.match(environ)
+    assert rule is rule1
+    assert kwargs == {'name':'security','value':'auth'}
+    environ['PATH_INFO'] = '/settings/security'
+    rule, kwargs = router.match(environ)
+    assert rule is rule1
+    assert kwargs == {'name':'security','value':''}
+
+    # with end slash
+
+    r = '/settings/<name>/<value>?/'
+    # <value> is optional
+    rule1 = Rule(r)
+    router = Router()
+    router.add(rule1)
+    environ['PATH_INFO'] = '/settings/security/auth/'
+    rule, kwargs = router.match(environ)
+    assert rule is rule1
+    assert kwargs == {'name':'security','value':'auth'}
+    environ['PATH_INFO'] = '/settings/security'
+    rule, kwargs = router.match(environ)
+    assert rule is rule1
+    assert kwargs == {'name':'security','value':''}
+
+    param = rule1.params['value']
+    assert param.optional
+    param = rule1.params['name']
+    assert not param.optional
+
+    r = '/settings/<name>?/<int:value>?/'
+    # <value> and <name>  optional
+    rule1 = Rule(r)
+    router = Router()
+    router.add(rule1)
+    environ['PATH_INFO'] = '/settings/'
+    rule, kwargs = router.match(environ)
+    assert rule is rule1
+    assert kwargs == {'name':'','value':None}
+
+    r = '/settings/<name>?/global'
+    # <name>  optional
+    rule1 = Rule(r)
+    router = Router()
+    router.add(rule1)
+    environ['PATH_INFO'] = '/settings/global'
+    rule, kwargs = router.match(environ)
+    assert rule is rule1
+    assert kwargs == {'name':''}
