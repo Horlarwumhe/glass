@@ -35,14 +35,15 @@ or clone from github;
 
 ```py
 
-  from glass import GlassApp
+from glass import GlassApp
 
-  app = GlassApp()
-  @app.route('/')
-  def home():
-    return 'Hello, welcome.'
-  # app.run()
-  app.run(host='127.0.0.1',port=8000,debug=True,auto_reload=True)
+app = GlassApp()
+
+@app.route('/')
+def home():
+  return 'Hello, welcome.'
+# app.run()
+app.run(host='127.0.0.1',port=8000,debug=True,auto_reload=True)
 
 ```
 
@@ -50,34 +51,34 @@ Using a WSGI web server to start Glass
 
 ```py
 
-  from glass import GlassApp
+from glass import GlassApp
 
-    app = GlassApp()
-    @app.route('/')
-    def home():
-      return 'Hello, welcome.'
+app = GlassApp()
+@app.route('/')
+def home():
+  return 'Hello, welcome.'
 
 ```
 
 Gunicorn
 
+save the as **main.py**
 ```bash
-
-   $ gunicorn app:app
+   $ gunicorn main:app
 ```
 
 Variable url rule
 
 ```py
 
-  @app.route('/greet/<name>')
-  def greet(name):
-      return 'Hello {}'.format(name)
-  @app.route('/user/<int:user_id>/profile')
-  def user_profile(user_id):
-    user = get_user(user_id)
-    return user.to_dict()
-  #app.run(host='127.0.0.1',port=8000,debug=True,auto_reload=True)
+@app.route('/greet/<name>')
+def greet(name):
+    return 'Hello {}'.format(name)
+@app.route('/user/<int:user_id>/profile')
+def user_profile(user_id):
+  user = get_user(user_id)
+  return user.to_dict()
+#app.run(host='127.0.0.1',port=8000,debug=True,auto_reload=True)
 
 ```
 
