@@ -225,6 +225,9 @@ class GlassApp:
                 return "Hello"
             app.run(debug=True)
         """
+        from_cli = os.environ.get("GLASS_FROM_CLI")
+        if from_cli:
+            return 
         if debug is not None:
             self.config['DEBUG'] = bool(debug)
         from glass.server import GlassServer

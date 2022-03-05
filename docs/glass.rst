@@ -191,6 +191,32 @@ The url rule can take optional converter.
       - If the url rule ends with slash e.g. ``/user/login/``, user using this ``/user/login`` will be redirected to the original url ``/user/login/``
 
 
+Optional URL parameters
+
+You can make a parameter of a URL optional by appending ``?`` to the parameter
+
+::
+
+    # <token> is optional
+    @app.route('/reset/<int:user_id>/<token>?')
+    def reset(user_id,token):
+        if not token:
+            #/reset/<user_id>
+        else:
+           # /reset/<user_id>/<token>
+        return "hello"
+
+    #<post_title> is optional
+    @app.route('/<post_id>/<post_title>?/read')
+    def read(post_id,post_title):
+        if post_title:
+           # /<post_id/read
+        else:
+            # /<post_id/<post_title>/read
+        return "hello"
+
+
+
 Custom Converter.
 
 You can write a converter to match this (``/1-2-3-4-5``) and convert it to list of integers.
