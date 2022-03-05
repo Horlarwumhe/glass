@@ -62,7 +62,7 @@ def home():
 
 Gunicorn
 
-save the as **main.py**
+save the file as **main.py**
 ```bash
    $ gunicorn main:app
 ```
@@ -305,7 +305,6 @@ def truncate(text,size,s):
 
 ```
 
-``` 
 ## Documentation
 
 Documentation is available on available on [readthedocs](https://glassapp.readthedocs.io).
