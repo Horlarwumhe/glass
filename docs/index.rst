@@ -21,6 +21,7 @@ What does it look like ?
 .. toctree::
    glass
    template
+   api
    :maxdepth: 2
 
 
