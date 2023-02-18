@@ -8,9 +8,9 @@ from glass.exception import HTTP404, MethodNotAllow
 # from glass.requests import request
 from ._helpers import current_app as app
 
-RULE_REGEX = re.compile(r'<(?:(?P<converter>[^>:]+):)?(?P<parameter>\w+)>\??')
+RULE_REGEX = re.compile(r"<(?:(?P<converter>[^>:]+):)?(?P<parameter>\w+)>\??")
 
-CONVERTERS_REGEX = {'int': r'\d+', 'path': r'.+', 'str': r'[^/]+'}
+CONVERTERS_REGEX = {"int": r"\d+", "path": r".+", "str": r"[^/]+"}
 
 # CONVERTERS = {'int': int, 'str': str, 'path': str}
 
@@ -28,7 +28,7 @@ class ParamConverter:
         return self.__class__
 
     def __repr__(self):
-        return '<Param %s --> %s' % (self.param_name, self.converter_name)
+        return "<Param %s --> %s" % (self.param_name, self.converter_name)
 
     def to_python(self, value):
         return self.converter.to_python(value)
@@ -44,14 +44,16 @@ class Rule:
         self.methods = methods or []
         self.converter = {}
         self.params = {}
-        self.regex = ''
-       
+        self.regex = ""
 
     def __repr__(self):
-        return '<Rule %s --> %s, {%s}' % (self.url_rule, self.callback,
-                                          ', '.join(self.methods))
+        return "<Rule %s --> %s, {%s}" % (
+            self.url_rule,
+            self.callback,
+            ", ".join(self.methods),
+        )
 
-    def get_callback(self, request_method=''):
+    def get_callback(self, request_method=""):
         if not self.methods or not request_method:
             return self.callback
         if request_method not in self.methods:
@@ -70,8 +72,10 @@ class Rule:
             for arg in missing_args:
                 p = self.params[arg]
                 if not p.optional:
-                    raise TypeError("Rule (%s) missing required parameter %s " %
-                            (self.url_rule, arg))
+                    raise TypeError(
+                        "Rule (%s) missing required parameter %s "
+                        % (self.url_rule, arg)
+                    )
         for _, param_converter in self.params.items():
             missing = False
             try:
@@ -79,16 +83,18 @@ class Rule:
                 value = param_converter.to_url(value)
             except KeyError:
                 missing = True
-                value = ''
-            
+                value = ""
+
             # if not param_converter.c_regex.match(value):
             #    pass
-            sub = '<(%s:)?%s>' % (param_converter.converter_name,
-                                  param_converter.param_name)
+            sub = "<(%s:)?%s>" % (
+                param_converter.converter_name,
+                param_converter.param_name,
+            )
             if param_converter.optional:
                 sub += r"\?"
             if missing:
-                sub = '/'+sub
+                sub = "/" + sub
             pattern = re.compile(sub)
             out = pattern.sub(value, out)
         return out
@@ -100,61 +106,65 @@ class Router:
         self._url_caches = {}
 
     def compile(self, rule):
-        '''compile url rule to regex
+        """compile url rule to regex
         return the rule regex and converters
 
         credit: github.com/django/django
 
-        '''
+        """
         original_route = rule
-        parts = ['^']
+        parts = ["^"]
         converters = {}
         while True:
             match = RULE_REGEX.search(rule)
             if not match:
                 parts.append(re.escape(rule))
                 break
-            parts.append(re.escape(rule[:match.start()]))
-            rule = rule[match.end():]
-            parameter = match.group('parameter')
-            optional = match.group().endswith('?')
+            parts.append(re.escape(rule[: match.start()]))
+            rule = rule[match.end() :]
+            parameter = match.group("parameter")
+            optional = match.group().endswith("?")
             if optional:
                 # mark previuos / as optional
-                parts.append('?')
+                parts.append("?")
             if not parameter.isidentifier():
-                raise TypeError('invalid identifier (%s) in URL rule %s' %
-                                (parameter, original_route))
-            converter = match.group('converter')
+                raise TypeError(
+                    "invalid identifier (%s) in URL rule %s"
+                    % (parameter, original_route)
+                )
+            converter = match.group("converter")
             if converter is None:
                 # no converter, default is str
-                converter = 'str'
+                converter = "str"
             try:
                 converter_cls = CONVERTERS[converter]
             except KeyError:
-                raise TypeError("unknown converter %s for the rule '%s'" %
-                                (converter, original_route))
+                raise TypeError(
+                    "unknown converter %s for the rule '%s'"
+                    % (converter, original_route)
+                )
             param_converter = ParamConverter(parameter, converter_cls())
             if optional:
                 param_converter.optional = True
             converters[parameter] = param_converter
-            r = ['(?P<',parameter,'>']
+            r = ["(?P<", parameter, ">"]
             if optional:
-                r.append('(')
+                r.append("(")
             r.append(converter_cls.regex)
             if optional:
-                r.append(')?')
-            r.append(')')
-            parts.append(''.join(r))
+                r.append(")?")
+            r.append(")")
+            parts.append("".join(r))
             # parts.append('(?P<' + parameter + '>(' + converter_cls.regex + '%s))'%"?"*optional)
-        if original_route.endswith('/'):
-            parts.append('?')
-        parts.append('$')
-        return ''.join(parts), converters
+        if original_route.endswith("/"):
+            parts.append("?")
+        parts.append("$")
+        return "".join(parts), converters
 
     def add(self, rule):
-        '''add new url rule'''
+        """add new url rule"""
         regex, params = self.compile(rule.url_rule)
-        #rule.converter = dict((k, v.func) for k, v in params.items())
+        # rule.converter = dict((k, v.func) for k, v in params.items())
         regex = re.compile(regex)
         rule.regex = regex
         rule.params = params
@@ -180,7 +190,7 @@ class Router:
         raise HTTP404()
 
     def apply_converter(self, view_kwargs, rule):
-        '''apply converter to url rule
+        """apply converter to url rule
         if the url rule == '/<str:user>/<int:user_id>'
         for this url '/horlar/1',
         the url parameter and value is
@@ -189,7 +199,7 @@ class Router:
         when the converters are applied
         the parameter and value now seem to be
         {'user':str('horlar'),'user_id':int('1')}
-        '''
+        """
         applied = {}
         for param, value in view_kwargs.items():
             converter = rule.params.get(param)
@@ -203,7 +213,7 @@ class Router:
         try:
             re.compile(regex)
         except re.error:
-            raise ValueError('bad re syntax %s' % regex)
+            raise ValueError("bad re syntax %s" % regex)
         CONVERTERS_REGEX[name] = regex
         CONVERTERS[name] = func
 
@@ -212,7 +222,7 @@ class Router:
 
 
 def url_for(view_name, **kwargs):
-    '''Build url for a view
+    """Build url for a view
     ::
 
       @app.route('/u/login')
@@ -250,7 +260,7 @@ def url_for(view_name, **kwargs):
 
     .. versionadded:: 0.0.3
 
-    '''
+    """
 
     if isinstance(view_name, types.FunctionType):
         view_name = view_name.__name__
@@ -260,34 +270,33 @@ def url_for(view_name, **kwargs):
     path = rule.build(**kwargs)
     for param in rule.params:
         kwargs.pop(param, None)
-    server_name = app.config['SERVER_NAME']
+    server_name = app.config["SERVER_NAME"]
     if server_name is None:
-        server_name = ''
-    fragment = kwargs.pop('_fragment', '')
+        server_name = ""
+    fragment = kwargs.pop("_fragment", "")
     if not fragment:
-        fragment = kwargs.pop('_target', '')
-    scheme = kwargs.pop('_scheme', '')
+        fragment = kwargs.pop("_target", "")
+    scheme = kwargs.pop("_scheme", "")
     uri = urlparse(server_name)
     netloc = uri.netloc
-    scheme = scheme or uri.scheme or 'http'
+    scheme = scheme or uri.scheme or "http"
     if not netloc and uri.path:
-        if not uri.path.startswith('/'):
+        if not uri.path.startswith("/"):
             # /www.domain.com is consider as path
-            netloc = uri.path[:-1] if uri.path.endswith('/') else uri.path
+            netloc = uri.path[:-1] if uri.path.endswith("/") else uri.path
         # urlparse('www.domain.com')
         # urllib parse this as path and not netloc
     if not netloc and scheme:
-        scheme = ''
+        scheme = ""
     query_string = urlencode(kwargs)
-    url = urlunparse(
-        (scheme, netloc, urlquote(path), '', query_string, fragment))
+    url = urlunparse((scheme, netloc, urlquote(path), "", query_string, fragment))
     return url
 
 
 class BaseCoverter:
 
-    regex = ''
-    name = ''
+    regex = ""
+    name = ""
 
     def to_url(self, value):
         return NotImplemented
@@ -297,8 +306,8 @@ class BaseCoverter:
 
 
 class StrConverter(BaseCoverter):
-    regex = r'[^/]+'
-    name = 'str'
+    regex = r"[^/]+"
+    name = "str"
 
     def to_url(self, value):
         return str(value)
@@ -308,8 +317,8 @@ class StrConverter(BaseCoverter):
 
 
 class IntConverter(BaseCoverter):
-    regex = r'\d+'
-    name = 'int'
+    regex = r"\d+"
+    name = "int"
 
     def to_url(self, value):
         return str(value)
@@ -321,12 +330,12 @@ class IntConverter(BaseCoverter):
 
 
 class PathConverter(StrConverter):
-    regex = r'.+'
-    name = 'path'
+    regex = r".+"
+    name = "path"
 
 
 CONVERTERS = {
-    'int': IntConverter,
-    'str': StrConverter,
-    'path': PathConverter,
+    "int": IntConverter,
+    "str": StrConverter,
+    "path": PathConverter,
 }

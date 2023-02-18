@@ -12,7 +12,7 @@ except ImportError:
 
     class BaseJinjaEnvironment:
         def __init__(self, *args, **kwargs):
-            raise ValueError('jinja is required')
+            raise ValueError("jinja is required")
 
     JinjaFileLoader = BaseJinjaEnvironment
 
@@ -27,7 +27,7 @@ def render_template(template, context=None, **kwargs):
             raise ValueError("context must be dict")
     context = context or {}
     context = Context(context)
-    backend = app.config.get('TEMPLATE_BACKEND', 'stl')
+    backend = app.config.get("TEMPLATE_BACKEND", "stl")
     backend_render = TEMPLATE_RENDER.get(backend)
     if not backend_render:
         raise ValueError("Unknown template backend %s" % backend)
@@ -35,14 +35,14 @@ def render_template(template, context=None, **kwargs):
 
 
 def render_string(string, context=None, **kwargs):
-    #TODO: code in this function similar to  above
-    #fix it
+    # TODO: code in this function similar to  above
+    # fix it
     if context:
         if not isinstance(context, dict):
             raise ValueError("context must be dict")
     context = context or {}
     context = Context(context)
-    backend = app.config.get('TEMPLATE_BACKEND', 'stl')
+    backend = app.config.get("TEMPLATE_BACKEND", "stl")
     backend_render = STRING_RENDER.get(backend)
     if not backend_render:
         raise ValueError("Unknown template backend %s" % backend)
@@ -67,23 +67,22 @@ def _render_stl_template(template, context, **kwargs):
 class AppTemplateEnviron(Environment):
     def __init__(self, app, *args, **kwargs):
         self.app = app
-        tags = kwargs.pop('tags', {})
+        tags = kwargs.pop("tags", {})
         tags.update(dict(url_for=url_for_parser))
-        kwargs['tags'] = tags
+        kwargs["tags"] = tags
         super().__init__(*args, **kwargs)
         self.add_globals()
 
     def add_globals(self):
-        """Get global values to inject in to the templates
-        """
+        """Get global values to inject in to the templates"""
         from glass.requests import request
         from glass.sessions import session
 
         globals = {
-            'get_flash_messages': flash_messages,
-            'request': request,
-            'session': session,
-            'app': self.app
+            "get_flash_messages": flash_messages,
+            "request": request,
+            "session": session,
+            "app": self.app,
         }
         self.globals.update(globals)
 
@@ -143,15 +142,18 @@ class JinjaEnvironment(BaseJinjaEnvironment):
     def __init__(self, app, *args, **kwargs):
         from glass.requests import request
         from glass.sessions import session
+
         super().__init__(*args, **kwargs)
 
-        self.globals.update({
-            'request': request,
-            'app': app,
-            'session': session,
-            'config': app.config,
-            'get_flash_messages': flash_messages
-        })
+        self.globals.update(
+            {
+                "request": request,
+                "app": app,
+                "session": session,
+                "config": app.config,
+                "get_flash_messages": flash_messages,
+            }
+        )
 
     def register_filter(self, name):
         """
@@ -162,6 +164,7 @@ class JinjaEnvironment(BaseJinjaEnvironment):
         # in the template
         #{{name | split(',')}}
         """
+
         def decor(func):
             self.filters[name] = func
             return func
@@ -183,13 +186,13 @@ def _render_jinja_template(template, context, **kwargs):
 
 
 TEMPLATE_RENDER = {
-    'jinja': _render_jinja_template,
-    'jinja2': _render_jinja_template,
-    'stl': _render_stl_template,
+    "jinja": _render_jinja_template,
+    "jinja2": _render_jinja_template,
+    "stl": _render_stl_template,
 }
 
 STRING_RENDER = {
-    'jinja': _render_jinja_string,
-    'jinja2': _render_jinja_string,
-    'stl': _render_stl_string,
+    "jinja": _render_jinja_string,
+    "jinja2": _render_jinja_string,
+    "stl": _render_stl_string,
 }

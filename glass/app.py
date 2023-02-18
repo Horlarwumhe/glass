@@ -7,17 +7,23 @@ from glass.requests import request
 from glass.response import JsonResponse, Redirect, Response, send_static
 from glass.routing import Router, Rule
 from glass.sessions import SessionManager
-from glass.templating import (AppTemplateEnviron, AppTemplateLoader, Cache,
-                              JinjaEnvironment, JinjaFileLoader)
+from glass.templating import (
+    AppTemplateEnviron,
+    AppTemplateLoader,
+    Cache,
+    JinjaEnvironment,
+    JinjaFileLoader,
+)
 from glass.utils import cached_property
 
 from ._helpers import app_stack
 
-logger = logging.getLogger('glass.app')
+logger = logging.getLogger("glass.app")
 stream = logging.StreamHandler()
 stream.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s:%(levelname)s: %(message)s',
-                              datefmt='%d/%m/%Y %H:%M:%S %p')
+formatter = logging.Formatter(
+    "%(asctime)s:%(levelname)s: %(message)s", datefmt="%d/%m/%Y %H:%M:%S %p"
+)
 stream.setFormatter(formatter)
 logger.addHandler(stream)
 logger.setLevel(logging.DEBUG)
@@ -34,6 +40,7 @@ class GlassApp:
       def home():
          return 'Hello'
     """
+
     def __init__(self, **kwargs):
 
         self.session_cls = SessionManager()
@@ -45,26 +52,27 @@ class GlassApp:
         self.after_request_funcs = []
         self.url_rules = []
         self.view_func = {}
-        static_url = self.config['STATIC_URL'] or 'static'
-        static_url = static_url.strip('/')
-        self.add_url_rule('/%s/<path:filename>' % static_url,
-                          self.send_static,
-                          view_name='static')
+        static_url = self.config["STATIC_URL"] or "static"
+        static_url = static_url.strip("/")
+        self.add_url_rule(
+            "/%s/<path:filename>" % static_url, self.send_static, view_name="static"
+        )
 
     @cached_property()
     def template_env(self):
         """Returns :class:`~glass.template.main.Environment` instance."""
         env = AppTemplateEnviron(
             self,
-            loader=AppTemplateLoader(path=self.config['TEMPLATES_FOLDER']),
-            cache=self.template_cache)
+            loader=AppTemplateLoader(path=self.config["TEMPLATES_FOLDER"]),
+            cache=self.template_cache,
+        )
         return env
 
     @cached_property()
     def jinja_env(self):
-        path = self.config['TEMPLATES_FOLDER']
+        path = self.config["TEMPLATES_FOLDER"]
         if not path:
-            path = os.path.abspath(os.path.join(os.getcwd(), 'templates'))
+            path = os.path.abspath(os.path.join(os.getcwd(), "templates"))
         env = JinjaEnvironment(self, loader=JinjaFileLoader(path))
         return env
 
@@ -75,7 +83,7 @@ class GlassApp:
     def template_cache(self):
         return Cache()
 
-    def route(self, url_rule, methods='GET', view_name=None, **kwargs):
+    def route(self, url_rule, methods="GET", view_name=None, **kwargs):
         """Register a view function for URL as decorator
         ::
 
@@ -83,6 +91,7 @@ class GlassApp:
            def index():
               return 'Hello'
         """
+
         def decorator(func):
             self._add_rule(url_rule, func, methods, view_name, **kwargs)
             return func
@@ -107,10 +116,10 @@ class GlassApp:
         return self.route(rule, methods, view_name)(func)
 
     def get(self, url_rule, **kwargs):
-        return self.route(url_rule, 'GET', **kwargs)
+        return self.route(url_rule, "GET", **kwargs)
 
     def post(self, url_rule, **kwargs):
-        return self.route(url_rule, 'POST', **kwargs)
+        return self.route(url_rule, "POST", **kwargs)
 
     def before_request(self, func):
         """Register a function to run before each request.
@@ -192,6 +201,7 @@ class GlassApp:
                 assert error.__class__ is TypeError
                 return 'TypeError exception occurs'
         """
+
         def decorator(func):
             if isinstance(error, int):
                 self.error_code_handlers[error] = func
@@ -204,11 +214,10 @@ class GlassApp:
     def url_converter(self, name, regex, func):
         self.router.add_converter(name, regex, func)
 
-
-    def use_converter(self,converter):
+    def use_converter(self, converter):
         self.router.use_converter(converter)
 
-    def run(self, host='127.0.0.1', port=8000, debug=None, auto_reload=False):
+    def run(self, host="127.0.0.1", port=8000, debug=None, auto_reload=False):
         """Run the application development server.
 
         :param host: ip address to listen on. default to localhost ``127.0.0.1``
@@ -227,14 +236,15 @@ class GlassApp:
         """
         from_cli = os.environ.get("GLASS_FROM_CLI")
         if from_cli:
-            return 
+            return
         if debug is not None:
-            self.config['DEBUG'] = bool(debug)
+            self.config["DEBUG"] = bool(debug)
         from glass.server import GlassServer
+
         GlassServer().run_app(self, host, port, auto_reload)
 
     def mount(self, environ=None):
-        ''' see :ref:`doc <mount-app>`'''
+        """see :ref:`doc <mount-app>`"""
 
         app_stack.push(self)
         if environ is not None:
@@ -255,8 +265,9 @@ class GlassApp:
             return_value = func(response)
             if not isinstance(return_value, response.__class__):
                 raise TypeError(
-                    'after_request function should return %s not %s' %
-                    (response.__class__, return_value.__class__))
+                    "after_request function should return %s not %s"
+                    % (response.__class__, return_value.__class__)
+                )
         if not return_value:
             return response
         return return_value
@@ -264,11 +275,10 @@ class GlassApp:
     def _call_callback(self, environ):
         try:
             rule, kwargs = self.router.match(environ)
-            method = environ.get("REQUEST_METHOD", 'GET')
-            if rule.url_rule.endswith('/'):
-                if not environ['PATH_INFO'].endswith('/'):
-                    return Redirect(environ['PATH_INFO'] + '/',
-                                    status_code=307)
+            method = environ.get("REQUEST_METHOD", "GET")
+            if rule.url_rule.endswith("/"):
+                if not environ["PATH_INFO"].endswith("/"):
+                    return Redirect(environ["PATH_INFO"] + "/", status_code=307)
             callback = rule.get_callback(method)
             response = self._call_before_request()
             if not response:
@@ -281,8 +291,8 @@ class GlassApp:
         return self._call_after_request(response)
 
     def _handle_app_exc(self, exc):
-        if not self.config['DEBUG']:
-            if hasattr(exc, 'code'):
+        if not self.config["DEBUG"]:
+            if hasattr(exc, "code"):
                 handler = self.error_code_handlers.get(exc.code)
             else:
                 handler = self.error_handlers.get(exc.__class__)
@@ -294,7 +304,7 @@ class GlassApp:
 
     def _handle_http_exc(self, exc):
         self.log_exception(exc)
-        debug = self.config['DEBUG']
+        debug = self.config["DEBUG"]
         if not debug:
             error_handler = self.error_code_handlers.get(exc.code)
             if error_handler:
@@ -308,16 +318,16 @@ class GlassApp:
 
     def log_exception(self, exc):
         code = 0
-        if hasattr(exc, 'code'):
+        if hasattr(exc, "code"):
             code = exc.code
         if code and code < 500:
-            logger.debug('''[{exc}] {cls} {path} {code}'''.format(
-                exc=exc,
-                cls=exc.__class__.__name__,
-                path=request.path,
-                code=code))
+            logger.debug(
+                """[{exc}] {cls} {path} {code}""".format(
+                    exc=exc, cls=exc.__class__.__name__, path=request.path, code=code
+                )
+            )
         else:
-            logger.exception('Error in path [%s]' % request.path)
+            logger.exception("Error in path [%s]" % request.path)
 
     def _build_response(self, response):
         if isinstance(response, Response):
@@ -330,12 +340,11 @@ class GlassApp:
             try:
                 response, code = response
             except (ValueError, TypeError):
-                raise TypeError('view return unknown response')
+                raise TypeError("view return unknown response")
             response = self._build_response(response)
             response.status_code = code
             return response
-        raise TypeError('view return unknown response type %s' %
-                        response.__class__)
+        raise TypeError("view return unknown response type %s" % response.__class__)
 
     def close_resources(self):
         request.close()

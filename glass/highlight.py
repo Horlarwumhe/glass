@@ -10,7 +10,7 @@
 
 import re
 
-__all__ = ['highlight']
+__all__ = ["highlight"]
 
 
 class all_styles(object):
@@ -23,15 +23,16 @@ class all_styles(object):
     or
     https://docs.python.org/3/reference/datamodel.html#implementing-descriptors
     """
+
     def __get__(self, instance, owner):
         val = _get_all_styles(owner)
-        setattr(owner, 'all_styles', val)
+        setattr(owner, "all_styles", val)
         return val
 
 
 class Highlighter(object):
-    """Does syntax highlighting.
-    """
+    """Does syntax highlighting."""
+
     def __init__(
         self,
         mode,
@@ -44,16 +45,16 @@ class Highlighter(object):
         """
         styles = styles or {}
         mode = mode.upper()
-        if link and link[-1] != '/':
-            link = link + '/'
+        if link and link[-1] != "/":
+            link = link + "/"
         self.link = link
         self.styles = styles
         self.output = []
         self.span_style = None
-        if mode == 'PYTHON':
-            self.suppress_tokens = ['GOTOHTML']
+        if mode == "PYTHON":
+            self.suppress_tokens = ["GOTOHTML"]
         else:
-            raise SyntaxError('Unknown mode: %s' % mode)
+            raise SyntaxError("Unknown mode: %s" % mode)
         self.mode = mode
 
     def python_tokenizer(
@@ -67,30 +68,30 @@ class Highlighter(object):
         """
 
         value = match.group()
-        if token == 'MULTILINESTRING':
+        if token == "MULTILINESTRING":
             self.change_style(token, style)
             self.output.append(value)
             self.strMultilineString = match.group(1)
-            return 'PYTHONMultilineString'
-        elif token == 'ENDMULTILINESTRING':
+            return "PYTHONMultilineString"
+        elif token == "ENDMULTILINESTRING":
             if match.group(1) == self.strMultilineString:
                 self.output.append(value)
-                self.strMultilineString = ''
-                return 'PYTHON'
-        if style and style[:5] == 'link:':
+                self.strMultilineString = ""
+                return "PYTHON"
+        if style and style[:5] == "link:":
             self.change_style(None, None)
-            (url, style) = style[5:].split(';', 1)
-            if url == 'None' or url == '':
-                self.output.append('<span style="%s">%s</span>' %
-                                   (style, value))
+            (url, style) = style[5:].split(";", 1)
+            if url == "None" or url == "":
+                self.output.append('<span style="%s">%s</span>' % (style, value))
             else:
-                self.output.append('<a href="%s%s" style="%s">%s</a>' %
-                                   (url, value, style, value))
+                self.output.append(
+                    '<a href="%s%s" style="%s">%s</a>' % (url, value, style, value)
+                )
         else:
             self.change_style(token, style)
             self.output.append(value)
-        if token == 'GOTOHTML':
-            return 'HTML'
+        if token == "GOTOHTML":
+            return "HTML"
         return None
 
     all_styles = all_styles()
@@ -109,14 +110,13 @@ class Highlighter(object):
                     match = o_re.match(data, i)
                     if match:
                         if style:
-                            new_mode = \
-                                Highlighter.all_styles[mode][0](self,
-                                                                token, match, style
-                                                                % dict(link=self.link))
+                            new_mode = Highlighter.all_styles[mode][0](
+                                self, token, match, style % dict(link=self.link)
+                            )
                         else:
-                            new_mode = \
-                                Highlighter.all_styles[mode][0](self,
-                                                                token, match, style)
+                            new_mode = Highlighter.all_styles[mode][0](
+                                self, token, match, style
+                            )
                         if new_mode is not None:
                             mode = new_mode
                         i += max(1, len(match.group()))
@@ -126,7 +126,7 @@ class Highlighter(object):
                 self.output.append(data[i])
                 i += 1
         self.change_style(None, None)
-        return ''.join(self.output).expandtabs(4)
+        return "".join(self.output).expandtabs(4)
 
     def change_style(self, token, style):
         """
@@ -136,9 +136,9 @@ class Highlighter(object):
         if token in self.styles:
             style = self.styles[token]
         if self.span_style != style:
-            if style != 'Keep':
+            if style != "Keep":
                 if self.span_style is not None:
-                    self.output.append('</span>')
+                    self.output.append("</span>")
                 if style is not None:
                     self.output.append('<span style="%s">' % style)
                 self.span_style = style
@@ -146,46 +146,70 @@ class Highlighter(object):
 
 def _get_all_styles(cls):
     return {
-        'PYTHON': (cls.python_tokenizer, (
-            ('GOTOHTML', re.compile(r'\}\}'), 'color: red'),
-            ('PUNC', re.compile(r'[-+*!|&^~/%\=<>\[\]{}(),.:]'),
-             'font-weight: bold'),
-            ('NUMBER',
-             re.compile(r'0x[0-9a-fA-F]+|[+-]?\d+(\.\d+)?([eE][+-]\d+)?|\d+'),
-             'color: red'),
-            ('KEYWORD',
-             re.compile(
-                 r'(def|class|break|continue|del|exec|finally|pass|' +
-                 r'print|raise|return|try|except|global|assert|lambda|' +
-                 r'yield|for|while|if|elif|else|and|in|is|not|or|import|' +
-                 r'from|True|False)(?![a-zA-Z0-9_])'),
-             'color:#185369; font-weight: bold'),
-            ('WEB2PY',
-             re.compile(
-                 r'(request|response|session|cache|redirect|local_import|HTTP|TR|XML|URL|BEAUTIFY|A|BODY|BR|B|CAT|CENTER|CODE|COL|COLGROUP|DIV|EM|EMBED|FIELDSET|LEGEND|FORM|H1|H2|H3|H4|H5|H6|IFRAME|HEAD|HR|HTML|I|IMG|INPUT|LABEL|LI|LINK|MARKMIN|MENU|META|OBJECT|OL|ON|OPTION|P|PRE|SCRIPT|SELECT|SPAN|STYLE|TABLE|THEAD|TBODY|TFOOT|TAG|TD|TEXTAREA|TH|TITLE|TT|T|UL|XHTML|IS_SLUG|IS_STRONG|IS_LOWER|IS_UPPER|IS_ALPHANUMERIC|IS_DATETIME|IS_DATETIME_IN_RANGE|IS_DATE|IS_DATE_IN_RANGE|IS_DECIMAL_IN_RANGE|IS_EMAIL|IS_EXPR|IS_FILE|IS_FLOAT_IN_RANGE|IS_IMAGE|IS_INT_IN_RANGE|IS_IN_SET|IS_IPV4|IS_LIST_OF|IS_LENGTH|IS_MATCH|IS_EQUAL_TO|IS_EMPTY_OR|IS_NULL_OR|IS_NOT_EMPTY|IS_TIME|IS_UPLOAD_FILENAME|IS_URL|CLEANUP|CRYPT|IS_IN_DB|IS_NOT_IN_DB|DAL|Field|SQLFORM|SQLTABLE|xmlescape|embed64)(?![a-zA-Z0-9_])'
-             ), 'link:%(link)s;text-decoration:None;color:#FF5C1F;'),
-            ('MAGIC', re.compile(r'self|None'),
-             'color:#185369; font-weight: bold'),
-            ('MULTILINESTRING', re.compile(r'r?u?(\'\'\'|""")'),
-             'color: #FF9966'),
-            ('STRING', re.compile(r'r?u?\'(.*?)(?<!\\)\'|"(.*?)(?<!\\)"'),
-             'color: #FF9966'),
-            ('IDENTIFIER', re.compile(r'[a-zA-Z_][a-zA-Z0-9_]*'), None),
-            ('COMMENT', re.compile(r'\#.*\r?\n'),
-             'color: green; font-style: italic'),
-            ('WHITESPACE', re.compile(r'[   \r\n]+'), 'Keep'),
-        )),
-        'PYTHONMultilineString':
-        (cls.python_tokenizer, (('ENDMULTILINESTRING',
-                                 re.compile(r'.*?("""|\'\'\')',
-                                            re.DOTALL), 'color: darkred'), )),
+        "PYTHON": (
+            cls.python_tokenizer,
+            (
+                ("GOTOHTML", re.compile(r"\}\}"), "color: red"),
+                (
+                    "PUNC",
+                    re.compile(r"[-+*!|&^~/%\=<>\[\]{}(),.:]"),
+                    "font-weight: bold",
+                ),
+                (
+                    "NUMBER",
+                    re.compile(r"0x[0-9a-fA-F]+|[+-]?\d+(\.\d+)?([eE][+-]\d+)?|\d+"),
+                    "color: red",
+                ),
+                (
+                    "KEYWORD",
+                    re.compile(
+                        r"(def|class|break|continue|del|exec|finally|pass|"
+                        + r"print|raise|return|try|except|global|assert|lambda|"
+                        + r"yield|for|while|if|elif|else|and|in|is|not|or|import|"
+                        + r"from|True|False)(?![a-zA-Z0-9_])"
+                    ),
+                    "color:#185369; font-weight: bold",
+                ),
+                (
+                    "WEB2PY",
+                    re.compile(
+                        r"(request|response|session|cache|redirect|local_import|HTTP|TR|XML|URL|BEAUTIFY|A|BODY|BR|B|CAT|CENTER|CODE|COL|COLGROUP|DIV|EM|EMBED|FIELDSET|LEGEND|FORM|H1|H2|H3|H4|H5|H6|IFRAME|HEAD|HR|HTML|I|IMG|INPUT|LABEL|LI|LINK|MARKMIN|MENU|META|OBJECT|OL|ON|OPTION|P|PRE|SCRIPT|SELECT|SPAN|STYLE|TABLE|THEAD|TBODY|TFOOT|TAG|TD|TEXTAREA|TH|TITLE|TT|T|UL|XHTML|IS_SLUG|IS_STRONG|IS_LOWER|IS_UPPER|IS_ALPHANUMERIC|IS_DATETIME|IS_DATETIME_IN_RANGE|IS_DATE|IS_DATE_IN_RANGE|IS_DECIMAL_IN_RANGE|IS_EMAIL|IS_EXPR|IS_FILE|IS_FLOAT_IN_RANGE|IS_IMAGE|IS_INT_IN_RANGE|IS_IN_SET|IS_IPV4|IS_LIST_OF|IS_LENGTH|IS_MATCH|IS_EQUAL_TO|IS_EMPTY_OR|IS_NULL_OR|IS_NOT_EMPTY|IS_TIME|IS_UPLOAD_FILENAME|IS_URL|CLEANUP|CRYPT|IS_IN_DB|IS_NOT_IN_DB|DAL|Field|SQLFORM|SQLTABLE|xmlescape|embed64)(?![a-zA-Z0-9_])"
+                    ),
+                    "link:%(link)s;text-decoration:None;color:#FF5C1F;",
+                ),
+                ("MAGIC", re.compile(r"self|None"), "color:#185369; font-weight: bold"),
+                ("MULTILINESTRING", re.compile(r'r?u?(\'\'\'|""")'), "color: #FF9966"),
+                (
+                    "STRING",
+                    re.compile(r'r?u?\'(.*?)(?<!\\)\'|"(.*?)(?<!\\)"'),
+                    "color: #FF9966",
+                ),
+                ("IDENTIFIER", re.compile(r"[a-zA-Z_][a-zA-Z0-9_]*"), None),
+                (
+                    "COMMENT",
+                    re.compile(r"\#.*\r?\n"),
+                    "color: green; font-style: italic",
+                ),
+                ("WHITESPACE", re.compile(r"[   \r\n]+"), "Keep"),
+            ),
+        ),
+        "PYTHONMultilineString": (
+            cls.python_tokenizer,
+            (
+                (
+                    "ENDMULTILINESTRING",
+                    re.compile(r'.*?("""|\'\'\')', re.DOTALL),
+                    "color: darkred",
+                ),
+            ),
+        ),
     }
 
 
 def highlight(
     code,
     language,
-    link='/examples/globals/vars/',
+    link="/examples/globals/vars/",
     counter=1,
     styles=None,
     highlight_line=None,
@@ -194,7 +218,9 @@ def highlight(
 ):
     styles = styles or {}
     attributes = attributes or {}
-    code_style = styles.get('CODE', None) or '''
+    code_style = (
+        styles.get("CODE", None)
+        or """
 font-size: 11px;
 font-family: Bitstream Vera Sans Mono,monospace;
 background-color: transparent;
@@ -203,8 +229,11 @@ padding: 5px;
 border: none;
 overflow: auto;
 white-space: pre !important;
-'''
-    linenumbers_style = styles.get('LINENUMBERS', None) or '''
+"""
+    )
+    linenumbers_style = (
+        styles.get("LINENUMBERS", None)
+        or """
 font-size: 11px;
 font-family: Bitstream Vera Sans Mono,monospace;
 background-color: transparent;
@@ -212,19 +241,21 @@ margin: 0;
 padding: 5px;
 border: none;
 color: #A0A0A0;
-'''
-    linehighlight_style = styles.get('LINEHIGHLIGHT', None) or \
-        'background-color: #EBDDE2;'
+"""
+    )
+    linehighlight_style = (
+        styles.get("LINEHIGHLIGHT", None) or "background-color: #EBDDE2;"
+    )
 
-    if language and language.upper() in ['PYTHON']:
+    if language and language.upper() in ["PYTHON"]:
         code = Highlighter(language, link, styles).highlight(code)
-    lines = code.split('\n')
+    lines = code.split("\n")
     if counter is None:
-        linenumbers = [''] * len(lines)
+        linenumbers = [""] * len(lines)
     elif isinstance(counter, str):
         linenumbers = [counter] * len(lines)
     else:
-        linenumbers = [str(i + counter) + '.' for i in range(len(lines))]
+        linenumbers = [str(i + counter) + "." for i in range(len(lines))]
 
     if highlight_line:
         if counter and not isinstance(counter, str):
@@ -233,9 +264,13 @@ color: #A0A0A0;
             lineno = highlight_line
         if lineno < len(lines):
             lines[lineno] = '<span style="%s">%s</span>' % (
-                linehighlight_style, lines[lineno])
+                linehighlight_style,
+                lines[lineno],
+            )
             linenumbers[lineno] = '<span style="%s">%s</span>' % (
-                linehighlight_style, linenumbers[lineno])
+                linehighlight_style,
+                linenumbers[lineno],
+            )
 
         if context_lines:
             if lineno + context_lines < len(lines):
@@ -247,19 +282,23 @@ color: #A0A0A0;
                 del lines[delslice]
                 del linenumbers[delslice]
 
-    code = '<br/>'.join(lines)
-    numbers = '<br/>'.join(linenumbers)
+    code = "<br/>".join(lines)
+    numbers = "<br/>".join(linenumbers)
 
     items = attributes.items()
-    fa = ' '.join([
-        key[1:].lower()
-        for (key, value) in items if key[:1] == '_' and value is None
-    ] + [
-        '%s="%s"' % (key[1:].lower(), str(value).replace('"', "'"))
-        for (key, value) in items if key[:1] == '_' and value
-    ])
+    fa = " ".join(
+        [key[1:].lower() for (key, value) in items if key[:1] == "_" and value is None]
+        + [
+            '%s="%s"' % (key[1:].lower(), str(value).replace('"', "'"))
+            for (key, value) in items
+            if key[:1] == "_" and value
+        ]
+    )
     if fa:
-        fa = ' ' + fa
-    return '<table%s><tr style="vertical-align:top;">' \
-           '<td style="min-width:40px; text-align: right;"><pre style="%s">%s</pre></td>' \
-           '<td><pre style="%s">%s</pre></td></tr></table>' % (fa, linenumbers_style, numbers, code_style, code)
+        fa = " " + fa
+    return (
+        '<table%s><tr style="vertical-align:top;">'
+        '<td style="min-width:40px; text-align: right;"><pre style="%s">%s</pre></td>'
+        '<td><pre style="%s">%s</pre></td></tr></table>'
+        % (fa, linenumbers_style, numbers, code_style, code)
+    )

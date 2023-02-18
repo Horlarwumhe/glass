@@ -5,34 +5,43 @@ import re
 import types
 import warnings
 
-logger = logging.getLogger('glass.template')
+logger = logging.getLogger("glass.template")
 
-VAR = re.compile(r'''
+VAR = re.compile(
+    r"""
 ^[\w_\.]+
-''', re.VERBOSE)
+""",
+    re.VERBOSE,
+)
 
-STRING = re.compile(r'''
+STRING = re.compile(
+    r"""
 (('.*?')|".*?")(\.\w+)*
-''', re.VERBOSE)
+""",
+    re.VERBOSE,
+)
 
-FILTER = re.compile(r'''
+FILTER = re.compile(
+    r"""
 (\s*\|\s*\w+)\s*(\((.*?)\))?\s*
-''', re.VERBOSE)
+""",
+    re.VERBOSE,
+)
 
 operators = {
-    'in': operator.contains,
-    '==': operator.eq,
-    '>': operator.gt,
-    '<': operator.lt,
-    '>=': operator.ge,
-    '<=': operator.le,
-    '!=': operator.ne,
-    'and': operator.and_,
-    '+': operator.add,
-    '-': operator.sub,
-    '*': operator.mul,
-    '/': operator.floordiv,
-    '//': operator.floordiv
+    "in": operator.contains,
+    "==": operator.eq,
+    ">": operator.gt,
+    "<": operator.lt,
+    ">=": operator.ge,
+    "<=": operator.le,
+    "!=": operator.ne,
+    "and": operator.and_,
+    "+": operator.add,
+    "-": operator.sub,
+    "*": operator.mul,
+    "/": operator.floordiv,
+    "//": operator.floordiv,
 }
 
 
@@ -45,7 +54,7 @@ class TemplateSyntaxError(Exception):
 
 class Node:
     def render(self, context, env=None):
-        return ''
+        return ""
 
 
 class TextNode(Node):
@@ -57,7 +66,7 @@ class TextNode(Node):
         return self.text
 
     def __repr__(self):
-        return ' <TextNode text={}'.format(self.text.strip()[:20])
+        return " <TextNode text={}".format(self.text.strip()[:20])
 
 
 class VarNode(Node):
@@ -70,17 +79,17 @@ class VarNode(Node):
     def render(self, ctx, env=None):
         ret = self.eval(ctx, env)
         if ret is None:
-            return ''
+            return ""
         # it is possible for self.eval to return non string
         # example, {{name.split}} which return list
         return str(ret)
 
-    def eval(self, ctx, env=None,funcargs=False):
-        '''This wil be called when VarNode is part of a block tag
+    def eval(self, ctx, env=None, funcargs=False):
+        """This wil be called when VarNode is part of a block tag
         eg. {% for name is names %}, {% if name %}, this will be called
         to know what (name) is.
         If it is not part of tag eg {{name}}, then render will be called
-        '''
+        """
         if not self.var:
             return None
         # var = self.var
@@ -89,19 +98,19 @@ class VarNode(Node):
             try:
                 i = self.var.index(quote, 1)
             except ValueError:
-                raise TemplateSyntaxError("Bad string %s"%self.var) from None
-            string = self.var[:i + 1]
-            attrs = self.var[i + 1:]
-            attrs = attrs.split('.')
+                raise TemplateSyntaxError("Bad string %s" % self.var) from None
+            string = self.var[: i + 1]
+            attrs = self.var[i + 1 :]
+            attrs = attrs.split(".")
             var = string
         else:
-            var, *attrs = self.var.split('.')
+            var, *attrs = self.var.split(".")
         var = self.resolve(var, ctx)
         if var is None:
             return None
         if isinstance(
-                var, (types.MethodType, types.FunctionType,
-                      types.BuiltinFunctionType)):
+            var, (types.MethodType, types.FunctionType, types.BuiltinFunctionType)
+        ):
             var = var()
         for attr in attrs:
             if not attr:
@@ -109,12 +118,14 @@ class VarNode(Node):
             attr = attr.strip()
             if hasattr(var, attr):
                 func = getattr(var, attr)
-                if isinstance(func, (types.MethodType, types.FunctionType,
-                                     types.BuiltinFunctionType)):
+                if isinstance(
+                    func,
+                    (types.MethodType, types.FunctionType, types.BuiltinFunctionType),
+                ):
                     var = func()
                 else:
                     var = func
-            elif hasattr(var, '__getitem__'):
+            elif hasattr(var, "__getitem__"):
                 try:
                     var = var[attr]
                 except (KeyError, TypeError):
@@ -130,11 +141,14 @@ class VarNode(Node):
         if funcargs:
             return var
         if env:
-            for func,args in self.funcs:
+            for func, args in self.funcs:
                 callback = env.filters.get(func)
                 if callback:
-                    args = [self.__class__(arg).eval(ctx,env,funcargs=True) for arg in args]
-                    var = callback(var,*args)
+                    args = [
+                        self.__class__(arg).eval(ctx, env, funcargs=True)
+                        for arg in args
+                    ]
+                    var = callback(var, *args)
         return var
 
     def resolve(self, var, context):
@@ -145,7 +159,7 @@ class VarNode(Node):
             return context.get(var)
 
     def __repr__(self):
-        return '<Var %s' % self.var_name
+        return "<Var %s" % self.var_name
 
     @classmethod
     def parse(cls, var):
@@ -153,7 +167,8 @@ class VarNode(Node):
         warnings.warn(
             "classmethod nodes.VarNode.parse is depreciated."
             " Use function variable_parse() in glass.template.parser",
-            UserWarning)
+            UserWarning,
+        )
         var = var.strip().rstrip()
         match = VAR.match(var)
         funcs = []
@@ -166,21 +181,21 @@ class VarNode(Node):
                 end = match.end()
                 var_name = match.group()
             else:
-                raise TemplateSyntaxError('couldnt parse %s.' % var)
+                raise TemplateSyntaxError("couldnt parse %s." % var)
         for match in FILTER.finditer(var):
             start = match.start()
             if start != end:
-                raise TemplateSyntaxError('couldnt parse %s from ( %s ).' %
-                                          (var[end:start], var))
-            func = ''.join(match.group(1).split()).strip('|')
+                raise TemplateSyntaxError(
+                    "couldnt parse %s from ( %s )." % (var[end:start], var)
+                )
+            func = "".join(match.group(1).split()).strip("|")
             end = match.end()
             args = match.group(3) or ""
             args = smart_split(args.strip())
-            funcs.append((func,args))
+            funcs.append((func, args))
         if end != len(var):
-            raise TemplateSyntaxError('couldnt  parse %s from %s.' %
-                                      (var[end:], var))
-        return cla(var_name, funcs)
+            raise TemplateSyntaxError("couldnt  parse %s from %s." % (var[end:], var))
+        return cls(var_name, funcs)
 
 
 class IfNode(Node):
@@ -202,7 +217,7 @@ class IfNode(Node):
         if self.else_:
             body = self.else_.body
             return body.render(context, env)
-        return ''
+        return ""
 
 
 class ForNode(Node):
@@ -216,13 +231,13 @@ class ForNode(Node):
     def render(self, context, env=None):
         iter_object = self.iter_object.eval(context, env)
         for_context = context.copy()
-        if not hasattr(iter_object, '__iter__'):
-            return ''
+        if not hasattr(iter_object, "__iter__"):
+            return ""
         loopvars = self.loopvars
         result = []
         multi = len(loopvars) > 1
         use_else = True
-        if not hasattr(iter_object, '__len__'):
+        if not hasattr(iter_object, "__len__"):
             iter_object = list(iter_object)
         for index, item in enumerate(iter_object):
             use_else = False
@@ -234,21 +249,26 @@ class ForNode(Node):
                 if item_len != len(loopvars):
                     raise TypeError(
                         "For loop sequence '%s' returned %s value(s),"
-                        " but loop variable has %s values(s), (%s)." %
-                        (self.iter_object.var, item_len, len(loopvars),
-                         ','.join(loopvars)))
+                        " but loop variable has %s values(s), (%s)."
+                        % (
+                            self.iter_object.var,
+                            item_len,
+                            len(loopvars),
+                            ",".join(loopvars),
+                        )
+                    )
                 key_value = zip(loopvars, item)
                 for_context.update(key_value)
             else:
                 for_context[self.loopvars[0]] = item
             loop = LoopCounter(iter_object)
             loop.set_index(index)
-            for_context['loop'] = loop
+            for_context["loop"] = loop
             result.append(self.body.render(for_context, env))
         if use_else and self.else_ is not None:
 
             return self.else_.body.render(for_context, env)
-        return ''.join(result)
+        return "".join(result)
 
 
 class ElseNode(Node):
@@ -259,17 +279,18 @@ class ElseNode(Node):
     def render(self, context, env=None):
         # This is never called, rendering of this
         # node is done when redering if node
-        return ''
+        return ""
 
 
 class ConditionNode(Node):
-    '''Test of if/elif node
+    """Test of if/elif node
     {% if condition %}
     the condition can take 3 forms
     1. lhs op rhs (if 1 == 2),(if a or b)
     2. not lhs (if not user.name)
     3. lhs (if user.name)
-    '''
+    """
+
     def __init__(self, lhs, op, rhs):
         self.lhs = lhs
         self.rhs = rhs
@@ -282,7 +303,7 @@ class ConditionNode(Node):
             lhs = self.lhs.eval(context, env)
         if self.rhs:
             rhs = self.rhs.eval(context, env)
-        if self.op == 'not':
+        if self.op == "not":
             # {% if not x %}
             return operator.not_(lhs)
         if not self.op:
@@ -302,7 +323,8 @@ class ConditionNode(Node):
 
 
 class ElifNode(Node):
-    '''elif node'''
+    """elif node"""
+
     def __init__(self, condition, body):
         self.condition = condition
         self.body = body
@@ -311,16 +333,17 @@ class ElifNode(Node):
     def render(self, context, env=None):
         # This is never called, rendering of this
         # node is done when redering if node
-        return ''
+        return ""
 
 
 class FilterNode(Node):
-    '''{% filter upper %}
-           everyting here with be in upper case
-           including {{user.name}}
-        {% end %}
-        but not this, it is outside the filter node
-    '''
+    """{% filter upper %}
+       everyting here with be in upper case
+       including {{user.name}}
+    {% end %}
+    but not this, it is outside the filter node
+    """
+
     def __init__(self, funcs, body):
         self.funcs = funcs
         self.body = body
@@ -337,7 +360,7 @@ class FilterNode(Node):
         return str(result)
 
     def __repr__(self):
-        return '<FilterNode filters=[{}]'.format(','.join(self.funcs))
+        return "<FilterNode filters=[{}]".format(",".join(self.funcs))
 
 
 class IncludeNode(Node):
@@ -347,12 +370,15 @@ class IncludeNode(Node):
     def render(self, context, env=None):
         template_name = self.template.eval(context, env)
         if template_name is None:
-            msg = "Couldn't find template refers to as '%s' in include tag." % self.template.var_name
+            msg = (
+                "Couldn't find template refers to as '%s' in include tag."
+                % self.template.var_name
+            )
             raise TemplateSyntaxError(msg)
         if env:
             template = env.get_template(template_name)
             return template.render(context)
-        return ''
+        return ""
 
 
 class ExtendNode(Node):
@@ -365,7 +391,10 @@ class ExtendNode(Node):
             template = self.template.eval(context, env)
             if template is None:
                 # {% extends name %}
-                msg = "Couldn't find template refers to as '%s' in extend tag." % self.template.var_name
+                msg = (
+                    "Couldn't find template refers to as '%s' in extend tag."
+                    % self.template.var_name
+                )
                 raise TemplateSyntaxError(msg)
             parent = env.get_template(template)
             parent_nodelist = parent.body
@@ -404,7 +433,7 @@ class ExtendNode(Node):
         return self.nodelist.render(context, env)
 
     def __repr__(self):
-        return '<ExtendNode template={}'.format(self.template.var_name)
+        return "<ExtendNode template={}".format(self.template.var_name)
 
 
 class BlockNode(Node):
@@ -418,22 +447,22 @@ class BlockNode(Node):
         return self.nodelist.render(context, env)
 
     def __repr__(self):
-        return '<BlockNode name={} is_super={} is_super_end={}'.format(
-            self.name, self.is_super, self.is_super_end)
+        return "<BlockNode name={} is_super={} is_super_end={}".format(
+            self.name, self.is_super, self.is_super_end
+        )
 
 
 class SetNode(Node):
-
-    def __init__(self,kwargs):
+    def __init__(self, kwargs):
         self.kwargs = kwargs
 
-
-    def render(self,context,env=None):
+    def render(self, context, env=None):
         resolved = {}
-        for key,value in self.kwargs.items():
-            resolved[key] = value.eval(context,env)
+        for key, value in self.kwargs.items():
+            resolved[key] = value.eval(context, env)
         context.update(resolved)
         return ""
+
 
 class NodeList(Node):
     def __init__(self, nodelist):
@@ -446,15 +475,16 @@ class NodeList(Node):
             result = node.render(context, env)
             if result is None:
                 logger.warning(
-                    '%s returns None'
-                    '  all template nodes are expected to return str'
-                    '  the result of this node is ignored' % node.__class__)
+                    "%s returns None"
+                    "  all template nodes are expected to return str"
+                    "  the result of this node is ignored" % node.__class__
+                )
                 continue
             results.append(str(result))
-        if hasattr(self, '_original_nodes_'):
+        if hasattr(self, "_original_nodes_"):
             self.nodelist = self._original_nodes_
             del self._original_nodes_
-        return ''.join(results)
+        return "".join(results)
 
     def get_node_by_type(self, nodetype):
         for node in self.nodelist:
@@ -487,15 +517,13 @@ class NodeList(Node):
         be restored back to the default nodelist after the Node is rendered.
         """
 
-        if hasattr(self, '_original_nodes_'):
+        if hasattr(self, "_original_nodes_"):
             return
         self._original_nodes_ = self.nodelist.copy()
 
 
 class LoopCounter:
-
-
-    def __init__(self,iteratable):
+    def __init__(self, iteratable):
         self._index = 0
         self.iteratable = list(iteratable)
 
@@ -517,6 +545,5 @@ class LoopCounter:
     def last(self):
         return self.index == len(self.iteratable)
 
-
-    def set_index(self,index):
+    def set_index(self, index):
         self._index = index

@@ -12,12 +12,12 @@ from glass.types import WSGIHeader
 from glass.utils import _thread_local, cached_property
 from multipart import parse_form_data
 
-logger = logging.getLogger('glass.app')
+logger = logging.getLogger("glass.app")
 
 
 def _parse_form_data_(environ):
 
-    max_length = current_app.config['MAX_CONTENT_LENGTH']
+    max_length = current_app.config["MAX_CONTENT_LENGTH"]
     if max_length and request.content_length > int(max_length):
         raise RequestTooLarge()
     try:
@@ -36,6 +36,7 @@ class Request:
       from glass import request
 
     """
+
     __storage__ = _thread_local()
     environ = _thread_local()
 
@@ -45,7 +46,7 @@ class Request:
     @cached_property()
     def path(self):
         """HTTP request path"""
-        return self.environ.get("PATH_INFO", '')
+        return self.environ.get("PATH_INFO", "")
 
     @cached_property()
     def cookies(self):
@@ -59,7 +60,7 @@ class Request:
             return 'hello'
 
         """
-        cookie = SimpleCookie(self.environ.get("HTTP_COOKIE", ''))
+        cookie = SimpleCookie(self.environ.get("HTTP_COOKIE", ""))
         cookie = cookie.values()
         cookie_dict = {}
         for c in cookie:
@@ -78,8 +79,7 @@ class Request:
            # request.args and request.query are same, use anyone.
         """
 
-        return dict(
-            urllib.parse.parse_qsl(self.environ.get("QUERY_STRING", '')))
+        return dict(urllib.parse.parse_qsl(self.environ.get("QUERY_STRING", "")))
 
     args = query
 
@@ -96,7 +96,7 @@ class Request:
     @property
     def host(self):
         """Host field in the request header"""
-        return self.environ.get("HTTP_HOST", '')
+        return self.environ.get("HTTP_HOST", "")
 
     def get_json(self):
         """Return data sent as json. If content_type is not
@@ -131,49 +131,48 @@ class Request:
              # of this size at once.
              # use request.stream here
         """
-        if hasattr(self, 'raw_data'):
+        if hasattr(self, "raw_data"):
             return self.raw_data.getvalue()
-        size = self.environ.get('CONTENT_LENGTH')
+        size = self.environ.get("CONTENT_LENGTH")
         if size:
             size = int(size)
-        data = self.environ['wsgi.input'].read(size)
+        data = self.environ["wsgi.input"].read(size)
         self.raw_data = io.BytesIO(data)
         return data
 
     @property
     def method(self):
         """HTTP request method"""
-        #FIXME: HTTP_REQUEST_METHOD or REQUEST_METHOD
-        return self.environ.get("REQUEST_METHOD", '').upper()
+        # FIXME: HTTP_REQUEST_METHOD or REQUEST_METHOD
+        return self.environ.get("REQUEST_METHOD", "").upper()
 
     @property
     def user_agent(self):
         """HTTP User-Agent"""
-        return self.environ.get('HTTP_USER_AGENT', '')
-
+        return self.environ.get("HTTP_USER_AGENT", "")
 
     @property
     def remote_addr(self):
         """returns client IP address"""
-        return self.environ.get("REMOTE_ADDR","")
+        return self.environ.get("REMOTE_ADDR", "")
 
     @property
     def stream(self):
         """Body of the request
 
-          ::
+        ::
 
-           # read 1024 bytes from request data
-           data = request.stream.read(1024)
-           # read everything at once
-           data = request.stream.read()
+         # read 1024 bytes from request data
+         data = request.stream.read(1024)
+         # read everything at once
+         data = request.stream.read()
         """
-        return self.environ['wsgi.input']
+        return self.environ["wsgi.input"]
 
     @property
     def content_type(self):
         """Request content_type"""
-        return self.environ.get("CONTENT_TYPE", '')
+        return self.environ.get("CONTENT_TYPE", "")
 
     @property
     def content_length(self):
@@ -181,7 +180,7 @@ class Request:
         return int(self.environ.get("CONTENT_LENGTH", 0))
 
     def __setattr__(self, key, name):
-        if key in ("environ", '__storage__'):
+        if key in ("environ", "__storage__"):
             super().__setattr__(key, name)
         else:
             self.__storage__[key] = name
@@ -191,7 +190,7 @@ class Request:
             return object.__dict__[name]
         if name in self.__storage__:
             value = self.__storage__[name]
-            if hasattr(value, 'var'):
+            if hasattr(value, "var"):
                 return value.var
             return value
         raise AttributeError('Atrribute not defined "%s"' % name)
@@ -223,7 +222,7 @@ class Request:
 
         """
         form, files = _parse_form_data_(self.environ)
-        self.__storage__['post'] = form
+        self.__storage__["post"] = form
         return files
 
     @cached_property()
@@ -240,12 +239,11 @@ class Request:
                 request.post.get('password')
         """
         form, files = _parse_form_data_(self.environ)
-        self.__storage__['files'] = files
+        self.__storage__["files"] = files
         return form
 
     def bind(self, env):
-        '''Bind request to  wsgi environ
-        '''
+        """Bind request to  wsgi environ"""
         self.environ = env
         self.__storage__ = {}
 

@@ -1,6 +1,7 @@
 import re
 
-smart_split_re = re.compile(r"""
+smart_split_re = re.compile(
+    r"""
     ((?:
         [^\s'"]*
         (?:
@@ -8,7 +9,9 @@ smart_split_re = re.compile(r"""
             [^\s'"]*
         )+
     ) | \S+)
-""", re.VERBOSE)
+""",
+    re.VERBOSE,
+)
 
 
 def smart_split(text):

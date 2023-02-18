@@ -11,18 +11,18 @@ def register(name):
     return inner
 
 
-@register('upper')
+@register("upper")
 def upper(value):
     return str(value).upper()
 
 
-@register('escape')
+@register("escape")
 def escape(value):
     return html.escape(str(value))
 
 
-@register('call')
+@register("call")
 def call(func):
-    if hasattr(func, '__call__'):
+    if hasattr(func, "__call__"):
         return func()
     return func

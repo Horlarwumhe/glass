@@ -2,7 +2,7 @@ import argparse
 import os
 import sys
 
-usage = '''
+usage = """
 
 Glass cli
 
@@ -25,11 +25,11 @@ Start the app development server
 Options:
     --host server host [default: localhost]
     --port server port [default: 8000]
-'''
+"""
 
 
-RUN_DEBUG='''Starting Glass development server on port {host}:{port}
-'''
+RUN_DEBUG = """Starting Glass development server on port {host}:{port}
+"""
 
 
 def find_path(path):
@@ -63,73 +63,79 @@ def find_path(path):
 
 def find_app(module_name):
     # __traceback_hide__ = True  # noqa: F841
-    os.environ['GLASS_FROM_CLI'] = "true"
+    os.environ["GLASS_FROM_CLI"] = "true"
     module_name = find_path(module_name)
     __import__(module_name)
-    
+
     module = sys.modules[module_name]
-    return getattr(module,'app')
+    return getattr(module, "app")
 
 
 def run_app(arg):
 
-	app = find_app(arg.app)
-	del os.environ['GLASS_FROM_CLI']
-	print(RUN_DEBUG.format(host=arg.host,port=arg.port))
-	app.run(host=arg.host,port=arg.port,debug=True)
+    app = find_app(arg.app)
+    del os.environ["GLASS_FROM_CLI"]
+    print(RUN_DEBUG.format(host=arg.host, port=arg.port))
+    app.run(host=arg.host, port=arg.port, debug=True)
+
 
 def show_routes(arg):
-	head = []
-	rules = []
-	methods = []
-	callbacks = []
+    head = []
+    rules = []
+    methods = []
+    callbacks = []
 
-	app = find_app(arg.app)
-	routes = app.url_rules
-	max_rule_len = max_func_len = max_method_len = 1
-	for route in routes:
-		rules.append(route.url_rule)
-		method = ','.join(route.methods)
-		methods.append(method)
-		callbacks.append(route.callback.__name__)
+    app = find_app(arg.app)
+    routes = app.url_rules
+    max_rule_len = max_func_len = max_method_len = 1
+    for route in routes:
+        rules.append(route.url_rule)
+        method = ",".join(route.methods)
+        methods.append(method)
+        callbacks.append(route.callback.__name__)
 
-		if len(route.url_rule) > max_rule_len:
-			max_rule_len = len(route.url_rule)
-		if len(methods) > max_method_len:
-			max_method_len = len(method)
-		if len(route.callback.__name__) > max_func_len:
-			max_func_len = len(route.callback.__name__)
+        if len(route.url_rule) > max_rule_len:
+            max_rule_len = len(route.url_rule)
+        if len(methods) > max_method_len:
+            max_method_len = len(method)
+        if len(route.callback.__name__) > max_func_len:
+            max_func_len = len(route.callback.__name__)
 
-	print('\tRules'," "*(max_rule_len-3), "Callback"," "*(max_func_len-5),"Methods",sep='')
-	print('\t','-'*max_rule_len,'-'*max_func_len,'---------')
-	lines = []
-	for rule,callback,method in zip(rules,callbacks,methods):
-		line = ['\t']
-		line.append(rule)
-		line.append(' '*(max_rule_len - len(rule)+2))
-		line.append(callback+' '* (max_func_len - len(callback)+2))
-		line.append(method+"\n")
-		lines.append(''.join(line))
+    print(
+        "\tRules",
+        " " * (max_rule_len - 3),
+        "Callback",
+        " " * (max_func_len - 5),
+        "Methods",
+        sep="",
+    )
+    print("\t", "-" * max_rule_len, "-" * max_func_len, "---------")
+    lines = []
+    for rule, callback, method in zip(rules, callbacks, methods):
+        line = ["\t"]
+        line.append(rule)
+        line.append(" " * (max_rule_len - len(rule) + 2))
+        line.append(callback + " " * (max_func_len - len(callback) + 2))
+        line.append(method + "\n")
+        lines.append("".join(line))
 
-	print(''.join(lines))
-
-
-
+    print("".join(lines))
 
 
 def main():
-	parser = argparse.ArgumentParser(description='Glass cli',usage=usage)
-	parser.add_argument('cmd')
-	parser.add_argument('--app',default='app.py')
-	parser.add_argument('--port',default=8000)
-	parser.add_argument('--host',default='localhost')
-	p = parser.parse_args()
-	# import pdb
-	# pdb.set_trace()
-	if p.cmd == 'routes':
-		show_routes(p)
-	elif p.cmd == 'run':
-		run_app(p)
+    parser = argparse.ArgumentParser(description="Glass cli", usage=usage)
+    parser.add_argument("cmd")
+    parser.add_argument("--app", default="app.py")
+    parser.add_argument("--port", default=8000)
+    parser.add_argument("--host", default="localhost")
+    p = parser.parse_args()
+    # import pdb
+    # pdb.set_trace()
+    if p.cmd == "routes":
+        show_routes(p)
+    elif p.cmd == "run":
+        run_app(p)
 
-if __name__  == "__main__":
-	main()
+
+if __name__ == "__main__":
+    main()

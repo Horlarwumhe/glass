@@ -70,13 +70,13 @@ class Cookie:
         # session=eyJuYW0; HttpOnly; Path=/
         out = ["%s=%s" % (self.name, self.value)]
         for key, value in self._attrs.items():
-            if key.lower() == 'httponly':
-                key = 'HttpOnly'
-            elif key.lower() == 'samesite':
-                key = 'SameSite'
+            if key.lower() == "httponly":
+                key = "HttpOnly"
+            elif key.lower() == "samesite":
+                key = "SameSite"
             else:
                 # secure,max-age,
-                key = key.replace('_', '-').title()
+                key = key.replace("_", "-").title()
             if isinstance(value, bool):
                 # httonly=True, change to
                 # HttpOnly;
@@ -87,7 +87,7 @@ class Cookie:
             else:
 
                 out.append("%s=%s" % (key, value))
-        return ("Set-Cookie", '; '.join(out))
+        return ("Set-Cookie", "; ".join(out))
 
     def __repr__(self):
         out = ["Cookie: %s=%s" % (self.name, self.value)]

@@ -1,7 +1,8 @@
-Glass is a mini WSGI routing library for building web applications.
-It comes with bultin template engine. It is micro-framework because it comes with limited tools for web development. But it is extensible.
+Glass is a lightweight `WSGI`_ web application framework. It is designed
+to make getting started quick and easy, with the ability to scale up to
+complex applications. GLass comes with template engine similar to django template engine.
 
-Glass  comes with builtin development server.
+Glass  comes with a builtin development server.
 
 ## Installation
 

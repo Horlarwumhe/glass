@@ -17,14 +17,14 @@ from .constant import REDIRECT_MESSAGE
 
 
 def _charset_from_content_type(text):
-    match = re.search(r';\s*charset=(?P<charset>[^\s;]+)', text, re.I)
+    match = re.search(r";\s*charset=(?P<charset>[^\s;]+)", text, re.I)
     if match:
         return match.group(1)
     return
 
 
 class BaseResponse:
-    ''' Base Response class.
+    """Base Response class.
     This class is not returned directly, but it is subclassed
     by other class. Use subclasess instead.
 
@@ -34,16 +34,13 @@ class BaseResponse:
     :param status_code: response http status code
     :param charset: content-type charset, default utf-8
     :param headers: ``dict`` or ``list`` of tuples, response headers
-    '''
-    status_code = 200
-    charset = 'utf-8'
-    content_type = 'text/html'
+    """
 
-    def __init__(self,
-                 content_type='',
-                 charset='',
-                 status_code=None,
-                 headers=None):
+    status_code = 200
+    charset = "utf-8"
+    content_type = "text/html"
+
+    def __init__(self, content_type="", charset="", status_code=None, headers=None):
         if status_code:
             self.status_code = status_code
         self.cookies = HTTPCookie()
@@ -65,8 +62,7 @@ class BaseResponse:
             # charset from content_type is used if present
             self.charset = charset
         else:
-            self.content_type = (self.content_type +
-                                 '; charset=%s' % self.charset)
+            self.content_type = self.content_type + "; charset=%s" % self.charset
 
         self.headers["Content-Type"] = self.content_type
 
@@ -94,12 +90,12 @@ class BaseResponse:
              return resp
 
         """
-        kw['Path'] = kw.pop('path', None) or kw.pop('Path', None) or '/'
-        kw['HttpOnly'] = kw.pop('httponly', False) or kw.pop('HttpOnly', False)
-        if kw.get('expire'):
+        kw["Path"] = kw.pop("path", None) or kw.pop("Path", None) or "/"
+        kw["HttpOnly"] = kw.pop("httponly", False) or kw.pop("HttpOnly", False)
+        if kw.get("expire"):
             # accept both expire and expires
             # for Expires cookie attribute
-            kw['Expires'] = kw.pop('expire', False)
+            kw["Expires"] = kw.pop("expire", False)
         self.cookies.add_cookie(name, value, **kw)
 
     def delete_cookie(self, key, **kw):
@@ -113,7 +109,7 @@ class BaseResponse:
               resp.delete_cookie('name',path='/',domain='domain')
               return resp
         """
-        kw['max_age'] = 0
+        kw["max_age"] = 0
         self.set_cookie(key, "", **kw)
 
     def set_header(self, name, value, **kwargs):
@@ -137,7 +133,7 @@ class BaseResponse:
         headers = list(self.headers.items())
         for cookie in self.cookies:
             headers.append(cookie.as_wsgi())
-        reason = http.HTTP_STATUS_CODES.get(self.status_code, 'Unknown')
+        reason = http.HTTP_STATUS_CODES.get(self.status_code, "Unknown")
         # headers.append(self.default_headers())
         start_response("%s %s" % (self.status_code, reason), headers)
 
@@ -147,11 +143,11 @@ class BaseResponse:
     def __iter__(self):
 
         if isinstance(self.content, (str, bytes)):
-            return map(utils.encode, (self.content, ))
+            return map(utils.encode, (self.content,))
         return map(utils.encode, iter(self.content))
 
     def close(self):
-        if hasattr(self.content, 'close'):
+        if hasattr(self.content, "close"):
             self.content.close()
 
 
@@ -170,17 +166,18 @@ class Response(BaseResponse):
        headers={"key":'value'},status_code=200)
 
     """
+
     def __init__(self, content, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if isinstance(content, (str, bytes)):
             content = utils.encode(content, self.charset)
-            self.headers['Content-Length'] = str(len(content))
+            self.headers["Content-Length"] = str(len(content))
         self.content = content
-        if self.status_code  in (204,304):
+        if self.status_code in (204, 304):
             # (rfc2616 section 10.2.3 and 10.3.5)
-            for header in ('Content-Type', 'Content-Length'):
+            for header in ("Content-Type", "Content-Length"):
                 self.headers.pop(header, None)
-            self.content = b''
+            self.content = b""
 
 
 class JsonResponse(Response):
@@ -194,11 +191,11 @@ class JsonResponse(Response):
            data  = {'name':'username','email':'usermail@mail.com'}
            return JsonResponse(data)
     """
+
     def __init__(self, content, *args, **kwargs):
         content = json.dumps(content)
         super().__init__(content, *args, **kwargs)
-        self.headers[
-            'Content-Type'] = 'application/json; charset=%s' % self.charset
+        self.headers["Content-Type"] = "application/json; charset=%s" % self.charset
 
 
 class Redirect(Response):
@@ -210,11 +207,12 @@ class Redirect(Response):
     the parameters and methods
 
     """
+
     status_code = 302
 
-    def __init__(self, location, *args, content='', **kwargs):
+    def __init__(self, location, *args, content="", **kwargs):
         super().__init__(content, *args, **kwargs)
-        self.headers['Location'] = location
+        self.headers["Location"] = location
         self.content = content  # TODO : ADD redirect message
 
 
@@ -228,6 +226,7 @@ class FileResponse(Response):
           return FileResponse('/path/to/file.jpg')
 
     """
+
     max_size = 10000000
     max_read = 4028
 
@@ -236,18 +235,17 @@ class FileResponse(Response):
             self.filename = file
             # The file will be closed once the response is
             # sent
-            file = open(file, 'rb')
+            file = open(file, "rb")
         elif isinstance(file, io.IOBase):
             self.filename = file.name
-        headers = kwargs.get('headers', {})
+        headers = kwargs.get("headers", {})
         if isinstance(headers, list):
             headers = dict(headers)
-        content_type = headers.get('Content-Type') or kwargs.get(
-            "content_type")
+        content_type = headers.get("Content-Type") or kwargs.get("content_type")
         if content_type:
-            headers['Content-Type'] = content_type
+            headers["Content-Type"] = content_type
         headers = self.add_headers(headers)
-        kwargs['headers'] = headers
+        kwargs["headers"] = headers
         super().__init__(file, *args, **kwargs)
 
     def add_headers(self, headers):
@@ -262,10 +260,10 @@ class FileResponse(Response):
             if mime_type:
                 content_type = mime_type
                 if encoding:
-                    content_type = mime_type + '; charset=%s' % encoding
+                    content_type = mime_type + "; charset=%s" % encoding
             else:
-                content_type = 'application/octet-stream'
-            headers['Content-Type'] = content_type
+                content_type = "application/octet-stream"
+            headers["Content-Type"] = content_type
         return headers
 
     def __iter__(self):
@@ -278,17 +276,19 @@ class FileResponse(Response):
 
 class TemplateResponse(Response):
     def __init__(self, template, context=None, **kwargs):
-        status_code = kwargs.pop('status_code', 200)
-        charset = kwargs.pop('charset', '')
-        headers = kwargs.pop('headers', None)
-        kwargs.pop('content_type', '')
-        content_type = 'text/html'
+        status_code = kwargs.pop("status_code", 200)
+        charset = kwargs.pop("charset", "")
+        headers = kwargs.pop("headers", None)
+        kwargs.pop("content_type", "")
+        content_type = "text/html"
         content = render_template(template, context, **kwargs)
-        super().__init__(content,
-                         status_code=status_code,
-                         charset=charset,
-                         headers=headers,
-                         content_type=content_type)
+        super().__init__(
+            content,
+            status_code=status_code,
+            charset=charset,
+            headers=headers,
+            content_type=content_type,
+        )
 
 
 class StaticResponse(FileResponse):
@@ -296,57 +296,52 @@ class StaticResponse(FileResponse):
 
 
 def send_static(filename, app, request):
-    """Send static file (css,jss,images,...)
-
-    """
+    """Send static file (css,jss,images,...)"""
     filename = urlunquote(filename)
-    if filename.startswith('../')\
-       or os.path.isabs(filename)\
-       or filename == '..':
-        return Response('Not Found', status_code=404)
+    if filename.startswith("../") or os.path.isabs(filename) or filename == "..":
+        return Response("Not Found", status_code=404)
 
     if_modified = request.headers.get("If-Modified-Since")
-    static = app.config['STATIC_FOLDER']
+    static = app.config["STATIC_FOLDER"]
     if not static:
-        static = os.path.join(os.getcwd(), 'static')
+        static = os.path.join(os.getcwd(), "static")
     file = os.path.abspath(os.path.join(static, filename))
-    if not os.path.exists(file)\
-       or not os.path.isfile(file):
-        return Response('Not Found', status_code=404)
+    if not os.path.exists(file) or not os.path.isfile(file):
+        return Response("Not Found", status_code=404)
     try:
         mtime = os.stat(file).st_mtime
     except OSError:
-        return Response('Not Found', status_code=404)
+        return Response("Not Found", status_code=404)
     mtime = datetime.utcfromtimestamp(mtime)
     if if_modified:
         time_tuple = parsedate_tz(if_modified)
         if time_tuple:
             if_modified = datetime(*time_tuple[:6])
             if not mtime > if_modified:
-                return Response('', status_code=304)
-    last_modified = mtime.strftime('%a, %d %b %Y %H:%M:%S GMT')
+                return Response("", status_code=304)
+    last_modified = mtime.strftime("%a, %d %b %Y %H:%M:%S GMT")
     headers = {
-        'Cache-Control': 'public, max-age=3153600',
-        'Last-Modified': last_modified,
+        "Cache-Control": "public, max-age=3153600",
+        "Last-Modified": last_modified,
     }
     return FileResponse(file, headers=headers)
 
 
-def redirect(location, code=302, response=''):
+def redirect(location, code=302, response=""):
     if not response:
-        response = REDIRECT_MESSAGE.format(location,location)
+        response = REDIRECT_MESSAGE.format(location, location)
     return Redirect(location, content=response, status_code=code)
 
 
 def flash(message, category=None):
-    flashes = session.get('__flash__', None)
+    flashes = session.get("__flash__", None)
     if not flashes:
-        flashes = session['__flash__'] = []
+        flashes = session["__flash__"] = []
     flashes.append(message)
 
 
 def messages():
-    msgs = session.get('__flash__', [])
+    msgs = session.get("__flash__", [])
     for msg in msgs:
         yield msg
     msgs.clear()

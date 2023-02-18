@@ -8,7 +8,7 @@ class GlassServer(Server):
         if self.args is None:
             self.args = CliArgument()
 
-    def run_app(self, app, addr='127.0.0.1', port=8000, auto_reload=False):
+    def run_app(self, app, addr="127.0.0.1", port=8000, auto_reload=False):
         self.app = app
         self.create_args()
         self.args.bind = addr
@@ -17,10 +17,10 @@ class GlassServer(Server):
         self.start()
 
     def load_app(self):
-        if not hasattr(self, 'app'):
-            raise RuntimeError('Use app.run() to start app server')
+        if not hasattr(self, "app"):
+            raise RuntimeError("Use app.run() to start app server")
         if self.app is None:
-            raise RuntimeError('Use app.run() to start app server')
+            raise RuntimeError("Use app.run() to start app server")
         return self.app
 
 

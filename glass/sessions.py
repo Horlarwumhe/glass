@@ -16,39 +16,39 @@ try:
 except ImportError:
     redis = None
 
-log = logger = logging.getLogger('glass.app')
+log = logger = logging.getLogger("glass.app")
 
 
 def _get_session_cookie_config():
     cookie_config = {}
-    domain = app.config['SESSION_COOKIE_DOMAIN']
+    domain = app.config["SESSION_COOKIE_DOMAIN"]
     if domain:
-        cookie_config['Domain'] = domain
-    cookie_config['Path'] = app.config['SESSION_COOKIE_PATH'] or '/'
-    expire = app.config['SESSION_COOKIE_EXPIRE']
+        cookie_config["Domain"] = domain
+    cookie_config["Path"] = app.config["SESSION_COOKIE_PATH"] or "/"
+    expire = app.config["SESSION_COOKIE_EXPIRE"]
     if expire:
-        t = int(time.time())+int(expire)
-        expire = email.utils.formatdate(t,usegmt=True)
-        cookie_config['Expires'] = expire
-    max_age = app.config['SESSION_COOKIE_MAXAGE']
+        t = int(time.time()) + int(expire)
+        expire = email.utils.formatdate(t, usegmt=True)
+        cookie_config["Expires"] = expire
+    max_age = app.config["SESSION_COOKIE_MAXAGE"]
     if max_age:
-        cookie_config['Max-Age'] = max_age
-    httponly = app.config['SESSION_COOKIE_HTTPONLY']
+        cookie_config["Max-Age"] = max_age
+    httponly = app.config["SESSION_COOKIE_HTTPONLY"]
     if httponly is True:
         # only accept True or False
-        cookie_config['HttpOnly'] = True
-    secure = app.config['SESSION_COOKIE_SECURE']
+        cookie_config["HttpOnly"] = True
+    secure = app.config["SESSION_COOKIE_SECURE"]
     if secure is True:
         # only accept True or False
-        cookie_config['Secure'] = True
+        cookie_config["Secure"] = True
     # name = app.config['SESSION_COOKIE_NAME']
-    same_site = app.config['SESSION_COOKIE_SAMESITE']
+    same_site = app.config["SESSION_COOKIE_SAMESITE"]
     if same_site:
-        cookie_config['SameSite'] = same_site
+        cookie_config["SameSite"] = same_site
     return cookie_config
 
 
-def encode_session(data, key=b'session-key'):
+def encode_session(data, key=b"session-key"):
     """Encode current session data and sign it.
     This generate string to be used as cookie
 
@@ -57,18 +57,19 @@ def encode_session(data, key=b'session-key'):
     :returns: ``str``.
 
     """
-    app_key = app.config['SECRET_KEY']
+    app_key = app.config["SECRET_KEY"]
     if not app_key:
-        log.warning('You used session without secret key set'
-                    ' consider setting secret key')
+        log.warning(
+            "You used session without secret key set" " consider setting secret key"
+        )
     key = key.encode()
     data = base64.b64encode(pickle.dumps(data))
     hash_value = hashlib.sha1(data + key).hexdigest()
     hash_value = hash_value[10:30]
-    return '%s.%s' % (hash_value, data.decode())
+    return "%s.%s" % (hash_value, data.decode())
 
 
-def decode_session(string, key='session-key'):
+def decode_session(string, key="session-key"):
     """Get current session data from session cookie.
     Returns empty dict if there is no cookie or
     the cookie verification failed.
@@ -76,7 +77,7 @@ def decode_session(string, key='session-key'):
     # key = app.config['SECRETE_KEY'] or key
     key = key.encode()
     try:
-        hash_value, data = string.split('.', 1)
+        hash_value, data = string.split(".", 1)
     except ValueError:
         return None
     real_hash = hashlib.sha1(data.encode() + key).hexdigest()[10:30]
@@ -106,13 +107,13 @@ class Session(dict):
 
     def get(self, key, default=None):
         """Get session data with its key,
-           returns default if not found.
-           Example::
+        returns default if not found.
+        Example::
 
-             from glass import session
-             @app.route('/')
-             def home():
-                name = session.get('name')
+          from glass import session
+          @app.route('/')
+          def home():
+             name = session.get('name')
         """
         try:
             return self[key]
@@ -128,14 +129,12 @@ class Session(dict):
         self.modified = True
         self.session_data[key] = value
 
-
     def __getitem__(self, key):
 
         try:
             return self.session_data[key]
         except (KeyError, TypeError):
             raise KeyError(key) from None
-
 
     def __iter__(self):
         return iter(self.session_data)
@@ -147,8 +146,7 @@ class Session(dict):
     def __len__(self):
         return len(self.session_data)
 
-
-    def __contains__(self,key):
+    def __contains__(self, key):
         return key in self.session_data
 
     def pop(self, key, default=None):
@@ -189,11 +187,11 @@ class Session(dict):
 
 
 class SessionManager:
-    salt = 'session-salt-'
+    salt = "session-salt-"
 
     def open(self):
-        key = app.config['SECRET_KEY']
-        name = app.config['SESSION_COOKIE_NAME']
+        key = app.config["SECRET_KEY"]
+        name = app.config["SESSION_COOKIE_NAME"]
         cookie = request.cookies.get(name)
         data = {}
         if cookie:
@@ -202,20 +200,18 @@ class SessionManager:
 
     def save(self, response=None):
         # TODO: add Secure and SameSite
-        key = app.config['SECRET_KEY']
+        key = app.config["SECRET_KEY"]
         cookie_config = _get_session_cookie_config()
         data = session.session_data
-        name = app.config['SESSION_COOKIE_NAME']
+        name = app.config["SESSION_COOKIE_NAME"]
         if not data:
             if not session.modified:
                 return
-            #TODO: add path,domain to delete_cookie
+            # TODO: add path,domain to delete_cookie
             response.delete_cookie(name, **cookie_config)
             return
         cookie = encode_session(data, key)
         response.set_cookie(name, cookie, **cookie_config)
-
-
 
 
 # class Redis:
@@ -228,16 +224,16 @@ class SessionManager:
 #     def get(self,key,default=None):
 #         return self._lib.get(key)
 
+
 class RedisSessionManager:
-     
-    def __init__(self,host='',port=6379,db=1):
+    def __init__(self, host="", port=6379, db=1):
         if redis is None:
             raise ImportError("redis module is not installed")
-        self._redis = redis.Redis(host=host,port=port,db=db)
+        self._redis = redis.Redis(host=host, port=port, db=db)
 
     def open(self):
-        key = app.config['SECRET_KEY']
-        name = app.config['SESSION_COOKIE_NAME']
+        key = app.config["SECRET_KEY"]
+        name = app.config["SESSION_COOKIE_NAME"]
         cookie = request.cookies.get(name)
         data = {}
         if cookie:
@@ -246,23 +242,22 @@ class RedisSessionManager:
                 try:
                     data = pickle.loads(redis_data)
                 except pickle.PickleError as e:
-                    logger.info("Failed to loads session data %s",e)
+                    logger.info("Failed to loads session data %s", e)
                     data = {}
             else:
                 print("sent cookie not found in redis")
         session.bind(data)
-        
 
-    def save(self,response=None):
-        key = app.config['SECRET_KEY']
+    def save(self, response=None):
+        key = app.config["SECRET_KEY"]
         cookie_config = _get_session_cookie_config()
         data = session.session_data
-        name = app.config['SESSION_COOKIE_NAME']
+        name = app.config["SESSION_COOKIE_NAME"]
         previous_cookie = request.cookies.get(name)
         if not data:
             if not session.modified:
                 return
-            #TODO: add path,domain to delete_cookie
+            # TODO: add path,domain to delete_cookie
             response.delete_cookie(name, **cookie_config)
             self._redis.delete(previous_cookie)
             return
@@ -270,20 +265,19 @@ class RedisSessionManager:
             response.set_cookie(name, previous_cookie, **cookie_config)
             return
         expire = (
-            app.config["SESSION_COOKIE_MAXAGE"]\
-            or app.config["SESSION_COOKIE_EXPIRE"]
-            )
+            app.config["SESSION_COOKIE_MAXAGE"] or app.config["SESSION_COOKIE_EXPIRE"]
+        )
         if expire:
             try:
-                expire  = int(expire)
+                expire = int(expire)
             except ValueError:
                 expire = 60 * 60 * 24 * 30
         else:
             expire = 60 * 60 * 24 * 30
         session_data = pickle.dumps(data)
         cookie = previous_cookie or get_random(35)
-        self._redis.set(cookie,session_data,ex=int(expire))
-        response.set_cookie(name,cookie,**cookie_config)
-        
+        self._redis.set(cookie, session_data, ex=int(expire))
+        response.set_cookie(name, cookie, **cookie_config)
+
 
 session = Session()
