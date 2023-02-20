@@ -1,0 +1,26 @@
+      
+phases:
+  install:
+    run-as: glass
+    #on-failure: ABORT | CONTINUE
+    runtime-versions:
+      python: 3.7
+    commands:
+      - python -m pip install --upgrade pip
+      - python -m pip install build
+  pre_build:
+    run-as: glass
+    #on-failure: ABORT | CONTINUE
+    commands:
+      - python -m pip install -r docs/docs-requirements.txt
+      - python -m pip install -r requirements.txt
+      - python setup.py install
+  build:
+    run-as: glass
+    #on-failure: ABORT | CONTINUE
+    commands:
+      -  sphinx-build docs docs/build
+      -  python -m build
+artifacts:
+  files:
+    - build/*
