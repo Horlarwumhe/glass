@@ -897,6 +897,23 @@ Session class is ``dict`` object, so all methods of ``dict`` are available.
     The default method used to encode session data only guarantee the integrity of the cookie. Anyone can decode and see the content of the cookie,  but it can`t be modified, because the ``sha1`` hash of cookie is sent with it. If  an hacker modified the cookie, it will be imposible to recompute the hash value unless the hacker has access to the app ``secret key``.
 
 
+Glass support redis as session storage.
+
+
+::
+
+    from glass import GlassApp
+    from glass.sessions import RedisSessionManager
+
+    app = GlassApp()
+    app.session_cls = RedisSessionManager(host='localhost',port=6379,db=1)
+
+You should set `SESSION_COOKIE_MAXAGE` in your config so redis can auto remove expire cookies.
+
+::
+
+    app.config['SESSION_COOKIE_MAXAGE'] = 60 * 5 # 5 minutes
+
 You can write  your own session storage to manage session.
 
 .. code:: python
