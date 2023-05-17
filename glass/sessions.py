@@ -214,17 +214,6 @@ class SessionManager:
         response.set_cookie(name, cookie, **cookie_config)
 
 
-# class Redis:
-
-
-#     def set(self,key,value):
-
-#         self._lib.set(key,value)
-
-#     def get(self,key,default=None):
-#         return self._lib.get(key)
-
-
 class RedisSessionManager:
     def __init__(self, host="", port=6379, db=1):
         if redis is None:
@@ -264,9 +253,7 @@ class RedisSessionManager:
         if not session.modified:
             response.set_cookie(name, previous_cookie, **cookie_config)
             return
-        expire = (
-            app.config["SESSION_COOKIE_MAXAGE"] or app.config["SESSION_COOKIE_EXPIRE"]
-        )
+        expire = app.config["SESSION_COOKIE_MAXAGE"]
         if expire:
             try:
                 expire = int(expire)
